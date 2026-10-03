@@ -91,14 +91,14 @@ deletes webhook events older than `WhatsApp:RetentionMonths` (default 6) daily. 
 
 | Part | URL | Host | How it deploys |
 |---|---|---|---|
-| Frontend | https://whatsapp.alamalhospitaljo.com | Hostinger (Node.js app) | Push to `main` → `Deploy frontend` workflow lints/builds, then force-pushes `frontend/` to the `deploy/frontend` branch → Hostinger builds and runs it |
+| Frontend | https://whatsapp.alamalhospitaljo.com | Hostinger (Node.js app) | Push to `main` → `Deploy frontend` workflow lints/builds, then moves the `deploy/frontend` branch to that commit → Hostinger builds and runs it |
 | API | https://whatsappapi.alamalhospitaljo.com | site4now (IIS) | Push to `main` touching `backend/` → `Deploy API` workflow builds, migrates the DB, uploads over FTPS, health-checks |
 
 `CI` builds and lints both apps on every PR and push.
 
 ### Hostinger (frontend)
 
-Connect the GitHub repo, branch **`deploy/frontend`**, framework Next.js, Node 22,
+Connect the GitHub repo, branch **`deploy/frontend`**, root directory **`frontend`**, framework Next.js, Node 22,
 build `npm run build`, start `npm start`. Environment variables:
 
 - `PROXY_SECRET`: same value as the API's `Proxy__Secret`. Lets the API see each visitor's real IP

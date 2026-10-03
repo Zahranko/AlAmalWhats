@@ -1,8 +1,8 @@
 name: Deploy frontend
 
-# Hostinger deploys the Next.js app from the `deploy/frontend` branch, which this workflow keeps
-# equal to the `frontend/` folder of main (so the app sits at the branch root). Hostinger then
-# runs `npm install`, `npm run build` and `npm start` itself.
+# Hostinger deploys the Next.js app from the `deploy/frontend` branch (root directory `frontend`).
+# This workflow moves that branch to main's commit only after lint and build pass, so a broken
+# frontend never reaches Hostinger. Hostinger then runs `npm install`, `npm run build`, `npm start`.
 on:
   push:
     branches: [main]
@@ -19,13 +19,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm, cache-dependency-path: frontend/package-lock.json }
       - name: Lint and build
         working-directory: frontend
         run: npm ci && npm run lint && npm run build
-      - name: Publish frontend/ to the deploy/frontend branch
-        run: |
-          git subtree split --prefix frontend -b deploy-frontend
-          git push --force origin deploy-frontend:deploy/frontend
+      - name: Move the deploy/frontend branch to this commit
+        run: git push --force origin HEAD:refs/heads/deploy/frontend
