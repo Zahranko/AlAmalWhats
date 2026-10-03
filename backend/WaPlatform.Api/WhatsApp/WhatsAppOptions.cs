@@ -24,6 +24,12 @@ public class WhatsAppOptions
     /// <summary>How long message data is kept; must match the period stated in Legal/privacy.html.</summary>
     public int RetentionMonths { get; set; } = 6;
 
+    /// <summary>
+    /// Number opened by /chat, for template "Visit website" buttons (Meta doesn't allow wa.me links
+    /// in buttons, so buttons point to /chat, which forwards to wa.me).
+    /// </summary>
+    public string? ChatNumber { get; set; }
+
     /// <summary>Local numbers (07...) are given this country code.</summary>
     public string DefaultCountryCode { get; set; } = "962";
 

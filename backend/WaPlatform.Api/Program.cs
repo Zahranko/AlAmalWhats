@@ -81,6 +81,17 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapGet("/api/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
 
+// Template button target: https://<api>/chat (default number) or /chat/{number}, optional ?text=.
+// Forwards to a WhatsApp chat; only ever to wa.me, so it can't be used as an open redirect.
+app.MapGet("/chat/{number?}", (string? number, string? text, Microsoft.Extensions.Options.IOptionsMonitor<WhatsAppOptions> o) =>
+{
+    var digits = PhoneNumbers.Normalize(number ?? o.CurrentValue.ChatNumber, o.CurrentValue.DefaultCountryCode);
+    if (digits is null) return Results.NotFound();
+    var url = $"https://wa.me/{digits}";
+    if (!string.IsNullOrWhiteSpace(text)) url += "?text=" + Uri.EscapeDataString(text.Length > 1000 ? text[..1000] : text);
+    return Results.Redirect(url);
+}).AllowAnonymous();
+
 // Public pages required by Meta for the app (Privacy Policy URL, Terms of Service URL).
 foreach (var page in new[] { "privacy", "terms" })
 {

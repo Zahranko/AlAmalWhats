@@ -138,3 +138,10 @@ Admins create keys under **WhatsApp → API keys**. Calls send `X-Api-Key: wak_.
 - `POST /api/v1/messages` `{ phone, name?, template, language?, header?, body?, buttons?, document?: { fileName, contentBase64 }, scheduledAt? }` → 202 `{ id, status }`
 - `GET /api/v1/messages/{id}`: status (each key sees only its own messages)
 - `GET /api/v1/templates`: approved templates and their variables
+
+### "Chat with us" template buttons
+
+Meta doesn't allow `wa.me` links in template buttons. Use a **Visit website** button pointing to
+`https://whatsappapi.alamalhospitaljo.com/chat`, which forwards to a WhatsApp chat with
+`WhatsApp:ChatNumber` (default `962799882744`). `/chat/{number}` opens any number (dynamic button:
+`.../chat/{{1}}`), and `?text=` pre-fills the message. It only ever forwards to `wa.me`.
