@@ -11,4 +11,6 @@ public class WebhookEvent
     public required string Payload { get; set; }
     public DateTime ReceivedAt { get; set; } = DateTime.UtcNow;
     public DateTime? ProcessedAt { get; set; }
+    /// <summary>Set when processing failed; the event is not retried automatically.</summary>
+    public string? Error { get; set; }
 }

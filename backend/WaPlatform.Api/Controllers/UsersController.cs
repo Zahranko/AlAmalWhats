@@ -143,8 +143,10 @@ public class UsersController(AppDbContext db, AuditService audit) : ControllerBa
         if (user.Role == Roles.Admin && user.IsActive && !await OtherActiveAdminExists(id))
             return BadRequest(new ApiError("There must be at least one active admin."));
 
-        // TODO(phase 3+): once messages.sent_by references users, refuse to delete users who
-        // have sent messages and ask the admin to disable them instead, to keep history intact.
+        // Keep "sent by" in message history intact: users who have sent messages are disabled, not deleted.
+        if (await db.Messages.AnyAsync(m => m.SentById == id) || await db.Campaigns.AnyAsync(c => c.CreatedById == id))
+            return BadRequest(new ApiError("This user has sent messages. Disable the user instead, so the history keeps their name."));
+
         db.Users.Remove(user);
         audit.Record(AuditActions.UserDeleted, UserTarget(user), new { user.Name, user.Email, user.Role });
         await db.SaveChangesAsync();

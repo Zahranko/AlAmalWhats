@@ -32,4 +32,22 @@ public static class AuditActions
     public const string AdminBootstrapped = "user.admin_bootstrapped";
 
     public const string WhatsAppTestSent = "whatsapp.test_sent";
+    public const string TemplatesSynced = "template.synced";
+
+    public const string CustomerCreated = "customer.created";
+    public const string CustomerUpdated = "customer.updated";
+    public const string CustomerDeleted = "customer.deleted";
+    public const string CustomersExported = "customer.exported";
+
+    public const string MessageSent = "message.sent";
+    public const string MessageReplied = "message.replied";
+    public const string MessageCancelled = "message.cancelled";
+    public const string MessagesExported = "message.exported";
+
+    public const string CampaignCreated = "campaign.created";
+    public const string CampaignCancelled = "campaign.cancelled";
+
+    public const string ApiKeyCreated = "apikey.created";
+    public const string ApiKeyRevoked = "apikey.revoked";
+    public const string SettingsUpdated = "settings.updated";
 }

@@ -24,6 +24,15 @@ public class WhatsAppOptions
     /// <summary>How long message data is kept; must match the period stated in Legal/privacy.html.</summary>
     public int RetentionMonths { get; set; } = 6;
 
+    /// <summary>Local numbers (07...) are given this country code.</summary>
+    public string DefaultCountryCode { get; set; } = "962";
+
+    /// <summary>Send rate of the queue. Meta allows 80/s by default; stay well below it.</summary>
+    public int MessagesPerSecond { get; set; } = 10;
+
+    /// <summary>Attempts for messages that fail for temporary reasons (Meta down, rate limits).</summary>
+    public int MaxAttempts { get; set; } = 4;
+
     public IEnumerable<string> MissingSettings()
     {
         if (string.IsNullOrWhiteSpace(AccessToken)) yield return nameof(AccessToken);

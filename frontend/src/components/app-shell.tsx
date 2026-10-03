@@ -19,11 +19,11 @@ type NavItem = { href: string; label: string; adminOnly?: boolean; phase?: numbe
 // Screens from the plan; ones with `phase` are not built yet and show as disabled.
 const nav: NavItem[] = [
   { href: "/", label: "Dashboard" },
-  { href: "/customers", label: "Customers", phase: 5 },
-  { href: "/send", label: "Single send", phase: 5 },
-  { href: "/campaigns", label: "Bulk send", phase: 6 },
-  { href: "/history", label: "Message history", phase: 5 },
-  { href: "/templates", label: "Templates", phase: 3 },
+  { href: "/customers", label: "Customers" },
+  { href: "/send", label: "Single send" },
+  { href: "/campaigns", label: "Bulk send" },
+  { href: "/history", label: "Message history" },
+  { href: "/templates", label: "Templates" },
 ];
 
 const adminNav: NavItem[] = [

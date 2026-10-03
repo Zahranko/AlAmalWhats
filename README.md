@@ -13,11 +13,11 @@ official WhatsApp Cloud API.
 |---|---|---|
 | 1 | Meta setup (business verification, WABA, number, token, 6 templates) | done by you, in parallel |
 | 2 | Foundation: login, Admin/Employee roles, Users, audit log, first-admin command | **done** |
-| 3 | WhatsApp core: Cloud API client, template sync, media upload, Settings | **in progress** (client, status, test send) |
-| 4 | Queue + webhook | **in progress** (webhook receives and stores events) |
-| 5 | Customers + single send | |
-| 6 | Bulk send (campaigns) | |
-| 7 | Dashboard, automatic triggers, hardening | |
+| 3 | WhatsApp core: Cloud API client, template sync (hourly + on demand), media upload, Settings | **done** |
+| 4 | Send queue (rate-limited, retries) + webhook processing (statuses, inbound, STOP/START opt-out) | **done** |
+| 5 | Customers, conversations + replies, single send (multi-template, multi-file), history | **done** |
+| 6 | Bulk send: Excel/CSV import, per-person variables and files, schedule, cancel | **done** |
+| 7 | Dashboard + cost estimate, `/api/v1` with API keys for other systems, CSV exports | **done** |
 
 ## Run locally
 
@@ -115,3 +115,26 @@ uploads a `web.config`, so they are not overwritten. The repository is public: n
 
 CORS allows `https://whatsapp.alamalhospitaljo.com` (`Cors:AllowedOrigins`), though the browser
 normally reaches the API through the frontend's `/api` proxy.
+
+## How sending works
+
+- Every outgoing message is queued in `messages`; `SendWorker` sends due messages at
+  `WhatsApp:MessagesPerSecond` (default 10), uploading attachments to Meta first, retrying
+  temporary failures (Meta down, rate limits) up to `WhatsApp:MaxAttempts` times. A message
+  interrupted mid-send is marked failed rather than resent, so nobody gets a report twice.
+- `WebhookProcessor` applies Meta's events: sent/delivered/read/failed statuses (with pricing),
+  incoming messages and files (new numbers become customers), and STOP/START keywords
+  (English and Arabic) which opt people out/in with an automatic confirmation.
+- Free-form replies are only possible within 24 hours of the customer's last message (Meta's rule);
+  otherwise staff send an approved template.
+- `MaintenanceService` (hourly) syncs templates and deletes data older than the 6-month retention.
+- The `Keep API awake` workflow pings the API every 10 minutes so IIS doesn't idle it out
+  (which would pause the queue and scheduled campaigns).
+
+### API for other systems
+
+Admins create keys under **WhatsApp → API keys**. Calls send `X-Api-Key: wak_...`:
+
+- `POST /api/v1/messages` `{ phone, name?, template, language?, header?, body?, buttons?, document?: { fileName, contentBase64 }, scheduledAt? }` → 202 `{ id, status }`
+- `GET /api/v1/messages/{id}`: status (each key sees only its own messages)
+- `GET /api/v1/templates`: approved templates and their variables

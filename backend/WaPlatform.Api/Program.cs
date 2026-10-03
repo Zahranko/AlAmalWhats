@@ -24,7 +24,22 @@ builder.Services.AddAppAuth(builder.Configuration, builder.Environment);
 builder.Services.AddControllers();
 builder.Services.Configure<WhatsAppOptions>(builder.Configuration.GetSection("WhatsApp"));
 builder.Services.AddHttpClient<WhatsAppClient>(c => c.Timeout = TimeSpan.FromSeconds(30));
-if (!isCli) builder.Services.AddHostedService<RetentionService>();
+builder.Services.AddScoped<MessageService>();
+builder.Services.AddScoped<TemplateSyncService>();
+if (!isCli)
+{
+    builder.Services.AddHostedService<SendWorker>();
+    builder.Services.AddHostedService<WebhookProcessor>();
+    builder.Services.AddHostedService<MaintenanceService>();
+}
+
+// /api/v1 (other hospital systems) authenticates with X-Api-Key instead of the session cookie.
+builder.Services.AddAuthentication()
+    .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, ApiKeyHandler>(ApiKeyHandler.SchemeName, null);
+builder.Services.AddRateLimiter(o => o.AddPolicy(ApiKeyHandler.SchemeName, ctx =>
+    System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+        ctx.Request.Headers[ApiKeyHandler.Header].ToString() is { Length: > 0 } key ? key : ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions { PermitLimit = 300, Window = TimeSpan.FromMinutes(1) })));
 
 // The browser normally reaches the API through the Next.js server (same origin), but allow the
 // frontend's origin directly as well, with cookies.
