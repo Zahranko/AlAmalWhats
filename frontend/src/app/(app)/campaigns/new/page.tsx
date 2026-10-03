@@ -15,6 +15,34 @@ interface RowError { row: number; phone: string; error: string }
 const guess = (columns: string[], ...words: string[]) =>
   columns.findIndex((c) => words.some((w) => c.toLowerCase().includes(w)));
 
+const looksLikePhone = (v: string) => /^[+0-9٠-٩\s\-()]{7,}$/.test(v.trim());
+
+/**
+ * A pasted list: one person per line, values separated by commas (also Arabic "،",
+ * semicolons, or tabs when copied from Excel). Trailing separators ("x,x,x,") are ignored.
+ */
+function parsePasted(text: string, hasHeader: boolean): Sheet {
+  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.length > 0);
+  const split = (line: string) => {
+    const cells = line.split(line.includes("\t") ? "\t" : /[,،;]/).map((c) => c.trim().replace(/^"(.*)"$/, "$1"));
+    while (cells.length > 1 && cells[cells.length - 1] === "") cells.pop();
+    return cells;
+  };
+  const rows = lines.map(split);
+  const header = hasHeader ? rows.shift() ?? [] : [];
+  const width = Math.max(header.length, ...rows.map((r) => r.length), 1);
+  const columns = Array.from({ length: width }, (_, i) => header[i] || `Column ${i + 1}`);
+  return { columns, rows: rows.map((r) => [...r, ...Array(width - r.length).fill("")]) };
+}
+
+/** The column whose values mostly look like phone numbers. */
+function phoneColumn(sheet: Sheet) {
+  const sample = sheet.rows.slice(0, 50);
+  const scores = sheet.columns.map((_, i) => sample.filter((r) => looksLikePhone(r[i] ?? "")).length);
+  const best = scores.indexOf(Math.max(...scores));
+  return scores[best] > 0 ? best : 0;
+}
+
 export default function NewCampaignPage() {
   const router = useRouter();
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -22,6 +50,9 @@ export default function NewCampaignPage() {
   const [templateId, setTemplateId] = useState<number | null>(null);
   const [sheet, setSheet] = useState<Sheet | null>(null);
   const [sheetName, setSheetName] = useState("");
+  const [inputMode, setInputMode] = useState<"file" | "paste">("file");
+  const [pasted, setPasted] = useState("");
+  const [pastedHeader, setPastedHeader] = useState(false);
   const [phoneCol, setPhoneCol] = useState(-1);
   const [nameCol, setNameCol] = useState(-1);
   const [sources, setSources] = useState<Record<string, Source>>({});
@@ -52,16 +83,35 @@ export default function NewCampaignPage() {
     try {
       const form = new FormData();
       form.append("file", file);
-      const s = await upload<Sheet>("/campaigns/parse", form);
-      setSheet(s);
-      setSheetName(file.name);
-      setPhoneCol(Math.max(0, guess(s.columns, "phone", "mobile", "هاتف", "موبايل", "جوال", "رقم")));
-      setNameCol(guess(s.columns, "name", "اسم"));
-      setFileCol(guess(s.columns, "file", "report", "ملف", "pdf"));
+      applySheet(await upload<Sheet>("/campaigns/parse", form), file.name, true);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not read the file.");
     } finally {
       setBusy(false);
+    }
+  }
+
+  function applyPasted() {
+    setError(null);
+    const s = parsePasted(pasted, pastedHeader);
+    if (s.rows.length === 0) return setError("Paste at least one line.");
+    if (s.rows.length > 5000) return setError("Paste at most 5,000 lines.");
+    applySheet(s, "Pasted list", pastedHeader);
+  }
+
+  /** Loads a list and pre-selects columns: by header names when there are any, else by position. */
+  function applySheet(s: Sheet, label: string, named: boolean) {
+    setSheet(s);
+    setSheetName(label);
+    const byName = named ? guess(s.columns, "phone", "mobile", "هاتف", "موبايل", "جوال", "رقم") : -1;
+    const phone = byName >= 0 ? byName : phoneColumn(s);
+    setPhoneCol(phone);
+    setNameCol(named ? guess(s.columns, "name", "اسم") : -1);
+    setFileCol(named ? guess(s.columns, "file", "report", "ملف", "pdf") : -1);
+    if (!named) {
+      // phone,value1,value2,... : give the template's variables the other columns in order.
+      const others = s.columns.map((_, i) => i).filter((i) => i !== phone);
+      setSources(Object.fromEntries(vars.map((v, k) => [v.key, k < others.length ? { column: others[k] } : { text: "" }])));
     }
   }
 
@@ -142,10 +192,40 @@ export default function NewCampaignPage() {
 
         {template && (
           <section className="card space-y-4 p-6">
-            <h2 className="font-semibold">1. Recipient list</h2>
-            <p className="text-sm text-gray-500">An Excel (.xlsx) or CSV file with a header row: one row per person, a phone number column, and a column for each value that differs per person. Up to 5,000 rows.</p>
-            <input type="file" accept=".xlsx,.csv" onChange={(e) => onSheet(e.target.files?.[0])} disabled={busy}
-              className="block text-sm file:mr-3 file:rounded-md file:border file:border-gray-300 file:bg-white file:px-3 file:py-2 file:text-sm" />
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="font-semibold">1. Recipient list</h2>
+              <div className="flex rounded-md border border-gray-300 bg-white text-sm" role="group" aria-label="List source">
+                {([["file", "Excel / CSV file"], ["paste", "Paste a list"]] as const).map(([m, label]) => (
+                  <button key={m} type="button" onClick={() => setInputMode(m)} aria-pressed={inputMode === m}
+                    className={`px-3 py-2 first:rounded-l-md last:rounded-r-md ${inputMode === m ? "bg-brand-600 text-white" : "hover:bg-gray-50"}`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {inputMode === "file" ? (
+              <>
+                <p className="text-sm text-gray-500">An Excel (.xlsx) or CSV file with a header row: one row per person, a phone number column, and a column for each value that differs per person. Up to 5,000 rows.</p>
+                <input type="file" accept=".xlsx,.csv" onChange={(e) => onSheet(e.target.files?.[0])} disabled={busy}
+                  className="block text-sm file:mr-3 file:rounded-md file:border file:border-gray-300 file:bg-white file:px-3 file:py-2 file:text-sm" />
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-gray-500">
+                  One person per line: the phone number, then the template&apos;s values in order, separated by commas. For example{" "}
+                  <code className="rounded bg-gray-100 px-1">0791234567,Ahmad,Sunday 10:00</code>. You can also paste rows copied from Excel.
+                </p>
+                <textarea className="input font-mono" rows={8} dir="auto" placeholder={"0791234567,Ahmad,Sunday\n0797654321,Sara,Monday"}
+                  value={pasted} onChange={(e) => setPasted(e.target.value)} aria-label="Pasted recipient list" />
+                <div className="flex flex-wrap items-center gap-4">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={pastedHeader} onChange={(e) => setPastedHeader(e.target.checked)} />
+                    The first line is a header (column names)
+                  </label>
+                  <button type="button" className="btn-secondary" onClick={applyPasted} disabled={!pasted.trim()}>Use this list</button>
+                </div>
+              </>
+            )}
             {sheet && <p className="text-sm text-gray-600">{sheetName}: {sheet.rows.length} rows, {sheet.columns.length} columns.</p>}
           </section>
         )}
