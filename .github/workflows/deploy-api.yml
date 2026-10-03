@@ -1,0 +1,71 @@
+name: Deploy API
+
+# Builds the API, applies database migrations, then uploads it over FTPS to the site4now host.
+# The server's web.config (which holds the production secrets) is never overwritten.
+#
+# Repository secrets (Settings > Secrets and variables > Actions):
+#   API_DB_CONNECTION  production SQL Server connection string
+#   FTP_HOST           e.g. win6036.site4now.net
+#   FTP_USER           hosting account user
+#   FTP_PASSWORD       hosting account password
+#   FTP_DIR            site folder on the FTP server, e.g. whatsapp
+on:
+  push:
+    branches: [main]
+    paths: ["backend/**", ".github/workflows/deploy-api.yml"]
+  workflow_dispatch:
+
+concurrency: deploy-api
+
+env:
+  API_URL: https://whatsappapi.alamalhospitaljo.com
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: 10.0.x }
+
+      - name: Publish
+        run: |
+          dotnet publish backend/WaPlatform.Api -c Release -o out
+          rm -f out/web.config out/appsettings.Development.json
+
+      - name: Apply database migrations
+        working-directory: out
+        env:
+          ConnectionStrings__Default: ${{ secrets.API_DB_CONNECTION }}
+        run: dotnet WaPlatform.Api.dll migrate
+
+      - name: Upload over FTPS
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_DIR: ${{ secrets.FTP_DIR }}
+        working-directory: out
+        run: |
+          set -euo pipefail
+          printf 'machine %s login %s password %s\n' "$FTP_HOST" "$FTP_USER" "$FTP_PASSWORD" > ~/.netrc
+          chmod 600 ~/.netrc
+          base="ftp://$FTP_HOST/$FTP_DIR"
+          up() { curl -sS --fail --retry 3 --ssl-reqd --netrc --ftp-create-dirs -T "$1" "$base/$2"; }
+
+          # app_offline.htm stops the app so IIS releases its DLLs while they are replaced.
+          echo '<html><body>Updating, back in a minute.</body></html>' > ../app_offline.htm
+          up ../app_offline.htm app_offline.htm
+          sleep 5
+          find . -type f | sed 's|^\./||' | while read -r f; do up "$f" "$f"; done
+          curl -sS --fail --ssl-reqd --netrc -Q "DELE /$FTP_DIR/app_offline.htm" "ftp://$FTP_HOST/" > /dev/null
+          rm ~/.netrc
+
+      - name: Health check
+        run: |
+          for i in $(seq 1 12); do
+            curl -sf "$API_URL/api/health" && exit 0
+            sleep 5
+          done
+          echo "API did not come back healthy" >&2
+          exit 1

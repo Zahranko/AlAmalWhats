@@ -1,0 +1,13 @@
+# .NET
+backend/**/bin/
+backend/**/obj/
+backend/*.log
+*.user
+appsettings.Local.json
+
+# Node / Next.js (frontend/.gitignore covers the rest)
+node_modules/
+*.log
+
+# Local publish output (its web.config holds production secrets)
+backend/publish/
