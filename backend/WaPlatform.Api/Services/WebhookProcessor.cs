@@ -10,7 +10,7 @@ namespace WaPlatform.Api.Services;
 /// opt-out keywords) and template status changes. Each step is idempotent, because Meta can
 /// deliver the same event more than once.
 /// </summary>
-public class WebhookProcessor(IServiceScopeFactory scopes, ILogger<WebhookProcessor> log) : BackgroundService
+public class WebhookProcessor(IServiceScopeFactory scopes, WebhookWakeup wakeup, ChangeFeed feed, ILogger<WebhookProcessor> log) : BackgroundService
 {
     private static readonly HashSet<string> StopWords = new(StringComparer.OrdinalIgnoreCase)
         { "stop", "unsubscribe", "إيقاف", "ايقاف", "توقف", "الغاء", "إلغاء", "الغاء الاشتراك", "إلغاء الاشتراك" };
@@ -32,7 +32,10 @@ public class WebhookProcessor(IServiceScopeFactory scopes, ILogger<WebhookProces
             var processed = 0;
             try { processed = await ProcessBatchAsync(ct); }
             catch (Exception ex) when (ex is not OperationCanceledException) { log.LogError(ex, "Webhook processing loop failed."); }
-            if (processed == 0) await Task.Delay(TimeSpan.FromSeconds(2), ct);
+            // Changes commit in a transaction after the interceptor saw them; announce once committed.
+            if (processed > 0) feed.Publish();
+            // The webhook endpoint pulses as soon as an event is stored; the delay is only a fallback.
+            else await wakeup.WaitAsync(TimeSpan.FromSeconds(10), ct);
         }
     }
 

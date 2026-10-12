@@ -154,14 +154,15 @@ export class ApiError extends Error {
   }
 }
 
-type Options = { method?: string; body?: unknown; redirectOn401?: boolean };
+type Options = { method?: string; body?: unknown; redirectOn401?: boolean; signal?: AbortSignal };
 
-export async function api<T = void>(path: string, { method = "GET", body, redirectOn401 = true }: Options = {}): Promise<T> {
+export async function api<T = void>(path: string, { method = "GET", body, redirectOn401 = true, signal }: Options = {}): Promise<T> {
   const res = await fetch(`/api${path}`, {
     method,
     headers: body === undefined ? undefined : { "Content-Type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
     credentials: "same-origin",
+    signal,
   });
 
   if (res.ok) {

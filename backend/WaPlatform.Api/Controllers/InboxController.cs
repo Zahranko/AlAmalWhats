@@ -18,8 +18,19 @@ public record InboxResult(List<InboxItem> Items, int Total, int Page, int PageSi
 
 [ApiController]
 [Route("api/inbox")]
-public class InboxController(AppDbContext db, MessageService messages) : ControllerBase
+public class InboxController(AppDbContext db, MessageService messages, ChangeFeed feed) : ControllerBase
 {
+    /// <summary>
+    /// Long poll: answers as soon as messages or conversations change (version differs from
+    /// <paramref name="since"/>), or after 25 s with the same version. The browser then asks again.
+    /// </summary>
+    [HttpGet("changes")]
+    public async Task<object> Changes(long? since, CancellationToken ct)
+    {
+        try { return new { version = await feed.WaitAsync(since, TimeSpan.FromSeconds(25), ct) }; }
+        catch (OperationCanceledException) { return new { version = feed.Version }; }
+    }
+
     /// <summary>
     /// Customers with at least one message, most recent conversation first.
     /// filter: all (default), unanswered (their last messages have no reply yet), open (24-hour window open), optedOut.

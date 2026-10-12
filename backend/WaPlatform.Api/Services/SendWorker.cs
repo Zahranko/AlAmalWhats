@@ -11,7 +11,7 @@ namespace WaPlatform.Api.Services;
 /// Sends queued messages at WhatsApp:MessagesPerSecond. Each message is claimed with an atomic
 /// queued→sending update, so even two app instances (IIS overlapped recycle) never send twice.
 /// </summary>
-public class SendWorker(IServiceScopeFactory scopes, IOptionsMonitor<WhatsAppOptions> options, ILogger<SendWorker> log)
+public class SendWorker(IServiceScopeFactory scopes, IOptionsMonitor<WhatsAppOptions> options, SendWakeup wakeup, ILogger<SendWorker> log)
     : BackgroundService
 {
     private static readonly TimeSpan[] Backoff = [TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(15), TimeSpan.FromHours(1)];
@@ -31,7 +31,8 @@ public class SendWorker(IServiceScopeFactory scopes, IOptionsMonitor<WhatsAppOpt
             {
                 log.LogError(ex, "Send loop failed; retrying shortly.");
             }
-            if (sent == 0) await Task.Delay(TimeSpan.FromSeconds(3), ct);
+            // Queuing a message pulses the wakeup; the delay covers scheduled sends, retries and campaigns.
+            if (sent == 0) await wakeup.WaitAsync(TimeSpan.FromSeconds(3), ct);
         }
     }
 

@@ -15,8 +15,13 @@ builder.Configuration
     .AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true)
     .AddEnvironmentVariables();
 
-builder.Services.AddDbContext<AppDbContext>(o =>
-    o.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
+builder.Services.AddSingleton<WebhookWakeup>();
+builder.Services.AddSingleton<SendWakeup>();
+builder.Services.AddSingleton<ChangeFeed>();
+builder.Services.AddSingleton<LiveUpdatesInterceptor>();
+builder.Services.AddDbContext<AppDbContext>((sp, o) => o
+    .UseSqlServer(builder.Configuration.GetConnectionString("Default"))
+    .AddInterceptors(sp.GetRequiredService<LiveUpdatesInterceptor>()));
 builder.Services.AddDataProtection().SetApplicationName("WaPlatform").PersistKeysToDbContext<AppDbContext>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<AuditService>();

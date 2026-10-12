@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import { api, ApiError, formatDate, formatPhone, formatSize, qs, upload, type Customer, type InboxResult, type MediaFile, type Message } from "@/lib/api";
 import { CustomerForm } from "@/components/customer-form";
+import { useLiveVersion } from "@/components/app-shell";
 import { Avatar, dayKey, dayLabel, listTime, MessageRow, Preview, windowLeft } from "@/components/inbox";
 
 const FILTERS = [
@@ -26,7 +27,6 @@ const QUICK = [
 
 const PAGE = 50;
 const TAKE = 100;
-const POLL_MS = 8000;
 
 type Toast = { icon: string; text: string; key: number } | null;
 
@@ -50,6 +50,7 @@ function Inbox() {
   const [inbox, setInbox] = useState<InboxResult | null>(null);
   const [listError, setListError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
+  const live = useLiveVersion();
   const [infoOpen, setInfoOpen] = useState(false);
   const [toast, setToast] = useState<Toast>(null);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -62,11 +63,6 @@ function Inbox() {
     return () => clearTimeout(t);
   }, [search]);
 
-  // New messages and delivery statuses arrive through webhooks; poll while the tab is visible.
-  useEffect(() => {
-    const t = setInterval(() => { if (document.visibilityState === "visible") refresh(); }, POLL_MS);
-    return () => clearInterval(t);
-  }, [refresh]);
 
   useEffect(() => {
     let cancelled = false;
@@ -74,7 +70,7 @@ function Inbox() {
       .then((r) => { if (!cancelled) { setInbox(r); setListError(null); } })
       .catch((e) => { if (!cancelled) setListError(e.message); });
     return () => { cancelled = true; };
-  }, [query, filter, limit, tick]);
+  }, [query, filter, limit, tick, live]);
 
   useEffect(() => {
     if (!toast) return;
@@ -139,7 +135,7 @@ function Inbox() {
       </section>
 
       {activeId ? (
-        <Conversation key={activeId} id={activeId} tick={tick} infoOpen={infoOpen}
+        <Conversation key={activeId} id={activeId} tick={tick + live} infoOpen={infoOpen}
           onToggleInfo={() => setInfoOpen((o) => !o)} onBack={closeChat} onActivity={refresh} notify={notify} />
       ) : (
         <main className="panel convo" aria-label="Conversation">

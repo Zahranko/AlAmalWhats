@@ -6,12 +6,21 @@ import { createContext, useContext, useEffect, useRef, useState, useSyncExternal
 import { api, hardNavigate, type InboxResult, type Me } from "@/lib/api";
 
 const MeContext = createContext<Me | null>(null);
+const LiveContext = createContext(0);
 
 /** The signed-in user. Only usable inside the (app) layout, where it is always loaded. */
 export function useMe() {
   const me = useContext(MeContext);
   if (!me) throw new Error("useMe must be used inside AppShell");
   return me;
+}
+
+/**
+ * Changes whenever messages or conversations change on the server (new message, status update,
+ * send). Pages refresh their data when it changes; see the long poll in AppShell.
+ */
+export function useLiveVersion() {
+  return useContext(LiveContext);
 }
 
 type NavItem = { href: string; label: string; icon: string };
@@ -37,6 +46,7 @@ export const adminOnlyPaths = adminNav.map((n) => n.href);
 export function AppShell({ children }: { children: ReactNode }) {
   const [me, setMe] = useState<Me | null>(null);
   const [unanswered, setUnanswered] = useState(0);
+  const [live, setLive] = useState(0);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -48,17 +58,32 @@ export function AppShell({ children }: { children: ReactNode }) {
     if (me?.mustChangePassword && pathname !== "/account") router.replace("/account");
   }, [me, pathname, router]);
 
-  // Badge on the Inbox icon: conversations waiting for a reply.
+  // Long poll: the server answers as soon as anything changes (or after 25 s with no change).
+  // A periodic bump also covers changes the server can't announce (and a dropped connection).
   useEffect(() => {
     if (!me || me.mustChangePassword) return;
-    const load = () => {
-      if (document.visibilityState === "visible")
-        api<InboxResult>("/inbox?pageSize=1").then((r) => setUnanswered(r.counts.unanswered)).catch(() => {});
-    };
-    load();
-    const t = setInterval(load, 30_000);
-    return () => clearInterval(t);
-  }, [me, pathname]);
+    const abort = new AbortController();
+    let since: number | null = null;
+    (async () => {
+      while (!abort.signal.aborted) {
+        try {
+          const r: { version: number } = await api<{ version: number }>(`/inbox/changes${since === null ? "" : `?since=${since}`}`, { signal: abort.signal });
+          if (r.version !== since) { since = r.version; setLive((n) => n + 1); }
+        } catch {
+          if (abort.signal.aborted) return;
+          await new Promise((ok) => setTimeout(ok, 5000));
+        }
+      }
+    })();
+    const t = setInterval(() => { if (document.visibilityState === "visible") setLive((n) => n + 1); }, 60_000);
+    return () => { abort.abort(); clearInterval(t); };
+  }, [me]);
+
+  // Badge on the Inbox icon: conversations waiting for a reply.
+  useEffect(() => {
+    if (!me || me.mustChangePassword || !live) return;
+    api<InboxResult>("/inbox?pageSize=1").then((r) => setUnanswered(r.counts.unanswered)).catch(() => {});
+  }, [me, live, pathname]);
 
   if (!me) {
     return <div className="flex min-h-screen items-center justify-center text-sm text-gray-500">Loading…</div>;
@@ -70,6 +95,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <MeContext.Provider value={me}>
+      <LiveContext.Provider value={live}>
       <div className="app">
         <nav className="rail" aria-label="Main navigation">
           <Link href="/inbox" className="mark" title="Al Amal Hospital" translate="no">
@@ -107,6 +133,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </main>
         )}
       </div>
+      </LiveContext.Provider>
     </MeContext.Provider>
   );
 }
