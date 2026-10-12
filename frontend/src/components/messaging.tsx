@@ -109,7 +109,7 @@ function fill(text: string | null, names: string[], values: string[]) {
 export function TemplatePreview({ template, values, fileName }: { template: Template; values?: TemplateValues; fileName?: string }) {
   const v = values ?? emptyValues(template);
   return (
-    <div className="rounded-lg bg-[#e5ddd5] p-3">
+    <div className="rounded-lg bg-(--chat) p-3">
       <div className="max-w-sm rounded-lg bg-white p-3 text-sm shadow-sm">
         {needsMedia(template) && (
           <div className="mb-2 flex items-center gap-2 rounded bg-gray-100 px-3 py-4 text-xs text-gray-600">

@@ -40,7 +40,7 @@ export default function CustomerPage() {
   if (!customer) return error ? <ErrorText error={error} /> : <p className="text-sm text-gray-500">Loading…</p>;
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] flex-col">
+    <div className="flex h-[calc(100dvh-88px)] min-h-[480px] flex-col">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
         <div>
           <Link href="/customers" className="text-sm text-gray-500 hover:underline">← Customers</Link>
@@ -59,7 +59,7 @@ export default function CustomerPage() {
       </div>
 
       <div className="card flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div className="flex-1 space-y-2 overflow-y-auto bg-[#efeae2] p-4">
+        <div className="flex-1 space-y-2 overflow-y-auto bg-(--chat) p-4">
           {messages?.length === 0 && <p className="py-8 text-center text-sm text-gray-500">No messages yet.</p>}
           {messages?.map((m) => <Bubble key={m.id} m={m} />)}
           <div ref={bottom} />
@@ -80,7 +80,7 @@ function Bubble({ m }: { m: Message }) {
   const out = m.direction === "out";
   return (
     <div className={`flex ${out ? "justify-end" : "justify-start"}`}>
-      <div className={`max-w-[75%] rounded-lg px-3 py-2 text-sm shadow-sm ${out ? "bg-[#d9fdd3]" : "bg-white"}`}>
+      <div className={`max-w-[75%] rounded-lg px-3 py-2 text-sm shadow-sm ${out ? "bg-(--accent-soft)" : "bg-white"}`}>
         {m.templateName && <p className="mb-1 text-xs font-medium text-brand-700">Template: {m.templateName}</p>}
         {m.hasMedia && (
           <a href={`/api/messages/${m.id}/media`} className="mb-1 flex items-center gap-1 text-xs text-sky-700 hover:underline" target="_blank" rel="noopener">

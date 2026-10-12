@@ -28,11 +28,13 @@ export default function LoginPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center p-4">
-      <div className="card w-full max-w-sm p-8 shadow-sm">
+      <div className="w-full max-w-sm rounded-3xl bg-white p-8 shadow-sm">
         <div className="mb-6 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-600 text-lg font-bold text-white">W</div>
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-600 text-2xl text-(--on-accent) shadow-sm" aria-hidden="true">
+            <i className="ph-fill ph-heartbeat" />
+          </div>
           <div>
-            <h1 className="text-lg font-semibold">Messaging Platform</h1>
+            <h1 className="text-lg font-semibold" translate="no">Al Amal Patient Inbox</h1>
             <p className="text-sm text-gray-500">Sign in to continue</p>
           </div>
         </div>

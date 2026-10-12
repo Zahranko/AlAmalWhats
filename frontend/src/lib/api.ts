@@ -118,6 +118,29 @@ export interface Campaign {
   counts: StatusCounts;
 }
 
+export interface InboxItem {
+  customer: Customer;
+  last: {
+    direction: "in" | "out";
+    type: string;
+    templateName: string | null;
+    body: string | null;
+    mediaFileName: string | null;
+    status: MessageStatus;
+    createdAt: string;
+  } | null;
+  /** The customer's messages since our last message to them. */
+  unanswered: number;
+}
+
+export interface InboxResult {
+  items: InboxItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+  counts: { all: number; unanswered: number; open: number; optedOut: number };
+}
+
 export interface Paged<T> {
   items: T[];
   total: number;

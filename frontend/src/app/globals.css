@@ -1,25 +1,148 @@
 @import "tailwindcss";
 
+/* Pages opt into dark mode through <html data-theme>, set before paint by the root layout. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 @theme inline {
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-geist-sans), var(--font-arabic), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono);
-  --color-brand-50: #ecfdf5;
-  --color-brand-100: #d1fae5;
-  --color-brand-600: #128c7e;
-  --color-brand-700: #0f766e;
-  --color-brand-800: #075e54;
+  --color-brand-50: var(--accent-soft);
+  --color-brand-100: var(--accent-soft);
+  --color-brand-600: var(--accent);
+  --color-brand-700: var(--accent-hover);
+  --color-brand-800: var(--accent-text);
+}
+
+/* =========================================================
+   Design tokens. One accent, cool slate neutrals, one radius scale:
+   shell 24 / panels 16 / bubbles 18 / controls pill
+   ========================================================= */
+:root {
+  color-scheme: light;
+  --canvas: #e6ecf0;
+  --surface: #ffffff;
+  --surface-2: #f4f7f9;
+  --surface-3: #eaeff3;
+  --line: #e1e7ec;
+  --ink: #0f1b24;
+  --ink-2: #4a5a68;
+  --ink-3: #66757f;
+
+  --accent: #0e7490;
+  --accent-hover: #0b6178;
+  --accent-soft: #e2f2f6;
+  --accent-text: #0b5f76;
+  --on-accent: #ffffff;
+
+  --bubble-in: #ffffff;
+  --bubble-out: #0e7490;
+  --bubble-out-ink: #ffffff;
+  --bubble-out-meta: rgba(255, 255, 255, 0.78);
+  --tick-read: #a5f3fc;
+  --chat: #f2f5f8;
+
+  --danger: #c53030;
+  --danger-soft: #fdecec;
+  --warn: #8a5207;
+  --warn-soft: #fdf2df;
+
+  --shadow-sm: 0 1px 2px rgba(15, 40, 56, 0.06), 0 1px 1px rgba(15, 40, 56, 0.04);
+  --shadow-lg: 0 24px 60px -20px rgba(15, 40, 56, 0.28);
+
+  --r-shell: 24px;
+  --r-panel: 16px;
+  --r-bubble: 18px;
+  --r-tail: 6px;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --canvas: #070d12;
+  --surface: #0e161d;
+  --surface-2: #131d25;
+  --surface-3: #1a2630;
+  --line: #212f3a;
+  --ink: #e7eef3;
+  --ink-2: #a7b5c0;
+  --ink-3: #8494a1;
+  --accent: #2ba3bf;
+  --accent-hover: #46b6cf;
+  --accent-soft: #12303a;
+  --accent-text: #7fd3e6;
+  --on-accent: #04141a;
+  --bubble-in: #16222c;
+  --bubble-out: #135f73;
+  --bubble-out-ink: #f0fafc;
+  --bubble-out-meta: rgba(240, 250, 252, 0.7);
+  --chat: #0a1218;
+  --danger: #f07171;
+  --danger-soft: #3a1717;
+  --warn: #f2c27a;
+  --warn-soft: #33260f;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 24px 60px -20px rgba(0, 0, 0, 0.7);
+
+  /* The older screens use Tailwind's palette directly; remap it so they follow the theme too. */
+  --color-white: var(--surface);
+  --color-gray-50: var(--surface-2);
+  --color-gray-100: var(--surface-3);
+  --color-gray-200: var(--line);
+  --color-gray-300: #2c3b47;
+  --color-gray-400: #5f6f7c;
+  --color-gray-500: var(--ink-3);
+  --color-gray-600: var(--ink-2);
+  --color-gray-700: #c2cdd5;
+  --color-gray-800: #d9e1e7;
+  --color-gray-900: var(--ink);
+  --color-red-50: var(--danger-soft);
+  --color-red-100: var(--danger-soft);
+  --color-red-600: #d94848;
+  --color-red-700: var(--danger);
+  --color-red-800: var(--danger);
+  --color-green-50: #0f2a1d;
+  --color-green-100: #0f2a1d;
+  --color-green-700: #7edba6;
+  --color-green-800: #7edba6;
+  --color-amber-50: var(--warn-soft);
+  --color-amber-100: var(--warn-soft);
+  --color-amber-500: var(--warn);
+  --color-amber-700: var(--warn);
+  --color-amber-800: var(--warn);
+  --color-amber-900: var(--warn);
+  --color-blue-100: #12263d;
+  --color-blue-800: #8ec1f5;
+  --color-sky-600: var(--accent-text);
+  --color-sky-700: var(--accent-text);
 }
 
 body {
-  background: #f6f7f9;
-  color: #171717;
+  background: var(--canvas);
+  color: var(--ink);
+  font-size: 14.5px;
+  line-height: 1.5;
+}
+:lang(ar),
+[dir="rtl"] {
+  font-family: var(--font-arabic), var(--font-geist-sans), sans-serif;
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.ph,
+.ph-fill {
+  line-height: 1;
+}
+.num {
+  font-variant-numeric: tabular-nums;
 }
 
 @utility btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  @apply inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
 }
 @utility btn-primary {
-  @apply btn bg-brand-600 text-white hover:bg-brand-700;
+  @apply btn bg-brand-600 text-(--on-accent) hover:bg-brand-700;
 }
 @utility btn-secondary {
   @apply btn border border-gray-300 bg-white text-gray-800 hover:bg-gray-50;
@@ -28,11 +151,11 @@ body {
   @apply btn bg-red-600 text-white hover:bg-red-700;
 }
 @utility input {
-  @apply w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-100;
+  @apply w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-100;
 }
 @utility label {
   @apply mb-1 block text-sm font-medium text-gray-700;
 }
 @utility card {
-  @apply rounded-lg border border-gray-200 bg-white;
+  @apply rounded-2xl border border-gray-200 bg-white;
 }
