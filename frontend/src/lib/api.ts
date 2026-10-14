@@ -223,7 +223,8 @@ function refreshSession() {
     const exchange = async () => {
       try {
         const r = await fetch("/api/auth/refresh", { method: "POST", credentials: "same-origin" });
-        return r.ok ? "renewed" as const : r.status === 401 ? "ended" as const : "unavailable" as const;
+        // Only a busy or unreachable server leaves the session alone; anything else means sign in again.
+        return r.ok ? "renewed" as const : r.status === 429 || r.status >= 500 ? "unavailable" as const : "ended" as const;
       } catch {
         return "unavailable" as const;
       }
