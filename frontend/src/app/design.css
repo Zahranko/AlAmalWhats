@@ -279,3 +279,37 @@
   .ibx .bubble{max-width:84%}
   .ibx.info-open .info-panel{inset:0;width:100%;border-radius:0}
 }
+
+/* ---------- Motion, from the Al Amal console ----------
+   Spinner for loading pages and busy buttons, skeleton shimmer, a fade-up as each page opens,
+   dialogs that settle in, and bars that grow. All of it switches off under reduced motion. */
+.spin{width:28px;height:28px;border-radius:50%;flex:0 0 auto;border:3px solid var(--line);border-top-color:var(--accent);animation:spin .7s linear infinite}
+.page-loading{display:flex;align-items:center;justify-content:center;min-height:50vh}
+.app-loading{display:flex;align-items:center;justify-content:center;min-height:100dvh}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* A button doing its work: aria-busy="true" puts a spinner in front of its label. */
+button[aria-busy="true"]{pointer-events:none}
+button[aria-busy="true"]::before{content:"";width:14px;height:14px;flex:0 0 auto;border-radius:50%;border:2px solid currentColor;border-top-color:transparent;opacity:.85;animation:spin .7s linear infinite}
+
+.skel{display:block;border-radius:8px;background:var(--surface-3);position:relative;overflow:hidden}
+.skel::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--surface) 70%,transparent),transparent);animation:sweep 1.25s linear infinite}
+@keyframes sweep{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+
+.view{animation:viewin .26s var(--ease) both}
+@keyframes viewin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+.scrim-in{animation:fadein .16s var(--ease) both}
+.dialog-in{animation:dialogin .2s var(--ease) both}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+@keyframes dialogin{from{opacity:0;transform:translateY(-8px) scale(.99)}to{opacity:1;transform:none}}
+
+.grow{transform-origin:left center;animation:grow .7s var(--ease) both}
+.rise{transform-origin:bottom center;animation:rise .7s var(--ease) both}
+@keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes rise{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}
+  html{scroll-behavior:auto}
+}

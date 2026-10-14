@@ -86,7 +86,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [me, live, pathname]);
 
   if (!me) {
-    return <div className="flex min-h-screen items-center justify-center text-sm text-gray-500">Loading…</div>;
+    return (
+      <div className="app-loading" role="status" aria-live="polite">
+        <span className="spin" aria-hidden="true" /><span className="sr-only">Loading…</span>
+      </div>
+    );
   }
 
   const isAdmin = me.role === "admin";
@@ -117,10 +121,10 @@ export function AppShell({ children }: { children: ReactNode }) {
           <AccountMenu me={me} />
         </nav>
         {flush && !blocked ? (
-          <div className="app-flush">{children}</div>
+          <div className="app-flush view" key={pathname}>{children}</div>
         ) : (
           <main className="app-main">
-            <div className="app-main-inner">
+            <div className="app-main-inner view" key={pathname}>
               {blocked ? (
                 <div className="card p-8 text-center">
                   <h1 className="text-lg font-semibold">Admins only</h1>

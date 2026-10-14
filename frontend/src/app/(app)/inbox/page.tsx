@@ -335,7 +335,7 @@ function Conversation({ id, tick, infoOpen, onToggleInfo, onBack, onActivity, no
         <header className="convo-head">
           <button type="button" className="btn-icon back" onClick={onBack} aria-label="Back to Inbox"><i className="ph ph-caret-left" aria-hidden="true" /></button>
         </header>
-        <div className="welcome"><p role={error ? "alert" : undefined}>{error ?? "Loading conversation…"}</p></div>
+        <div className="welcome">{error ? <p role="alert">{error}</p> : <span className="spin" role="status" aria-label="Loading conversation" />}</div>
       </main>
     );
   }

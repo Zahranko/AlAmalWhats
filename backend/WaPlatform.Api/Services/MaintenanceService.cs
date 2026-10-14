@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using WaPlatform.Api.Data;
 using WaPlatform.Api.Domain;
@@ -9,7 +9,7 @@ namespace WaPlatform.Api.Services;
 /// <summary>
 /// Hourly housekeeping, also run at startup (on IIS the app may have been idle):
 /// - syncs templates from Meta, so new and changed templates appear without a manual sync;
-/// - deletes message data older than WhatsApp:RetentionMonths, the period promised in /privacy.
+/// - deletes message data older than WhatsApp:RetentionMonths, the period promised in /privacy, and expired sign-ins.
 /// </summary>
 public class MaintenanceService(IServiceScopeFactory scopes, IOptionsMonitor<WhatsAppOptions> options, ILogger<MaintenanceService> log)
     : BackgroundService
@@ -59,10 +59,12 @@ public class MaintenanceService(IServiceScopeFactory scopes, IOptionsMonitor<Wha
         var files = await db.MediaFiles
             .Where(f => f.CreatedAt < orphanCutoff && !db.Messages.Any(m => m.MediaFileId == f.Id))
             .ExecuteDeleteAsync(ct);
+        var tokens = await db.RefreshTokens.Where(t => t.ExpiresAt < DateTime.UtcNow).ExecuteDeleteAsync(ct);
         var campaigns = await db.Campaigns
             .Where(c => c.CreatedAt < cutoff && !db.Messages.Any(m => m.CampaignId == c.Id))
             .ExecuteDeleteAsync(ct);
 
+        if (tokens > 0) log.LogInformation("Deleted {Tokens} expired sign-in tokens.", tokens);
         if (events + messages + files + campaigns > 0)
             log.LogInformation("Retention: deleted {Messages} messages, {Files} files, {Campaigns} campaigns, {Events} webhook events older than {Cutoff:u}.",
                 messages, files, campaigns, events, cutoff);

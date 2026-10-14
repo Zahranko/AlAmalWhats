@@ -124,7 +124,7 @@ function TestSend({ disabled }: { disabled: boolean }) {
           Sent. Message ID <span className="break-all font-mono text-xs">{result}</span>
         </p>
       )}
-      <button type="submit" className="btn-primary" disabled={busy || disabled}>{busy ? "Sending…" : "Send test"}</button>
+      <button type="submit" className="btn-primary" aria-busy={busy} disabled={busy || disabled}>{busy ? "Sending…" : "Send test"}</button>
     </form>
   );
 }

@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { api, ApiError, formatDate, formatPhone, qs, type Message, type Paged } from "@/lib/api";
 import { useMe } from "@/components/app-shell";
-import { ErrorText, PageHeader } from "@/components/ui";
+import { ErrorText, PageHeader, PageLoading } from "@/components/ui";
 import { Pagination, StatusBadge } from "@/components/messaging";
 
 const PAGE_SIZE = 50;
@@ -14,7 +14,7 @@ const sources: [string, string][] = [["manual", "Single send"], ["reply", "Reply
 
 export default function HistoryPage() {
   return (
-    <Suspense fallback={<p className="text-sm text-gray-500">Loading…</p>}>
+    <Suspense fallback={<PageLoading />}>
       <History />
     </Suspense>
   );

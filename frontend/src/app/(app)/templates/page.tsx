@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { api, ApiError, formatDate, type Template } from "@/lib/api";
 import { useMe } from "@/components/app-shell";
-import { Badge, ErrorText, PageHeader } from "@/components/ui";
+import { Badge, ErrorText, PageHeader, PageLoading } from "@/components/ui";
 import { TemplatePreview, needsMedia } from "@/components/messaging";
 
 const statusTone = (s: string) => (s === "APPROVED" ? "green" : s === "REJECTED" || s === "DISABLED" ? "red" : "amber") as "green" | "red" | "amber";
@@ -39,11 +39,11 @@ export default function TemplatesPage() {
     <>
       <PageHeader title="Templates"
         description="Approved message templates from WhatsApp Manager. Create and edit them there; they sync here every hour."
-        actions={me.role === "admin" && <button className="btn-primary" onClick={sync} disabled={syncing}>{syncing ? "Syncing…" : "Sync now"}</button>} />
+        actions={me.role === "admin" && <button className="btn-primary" onClick={sync} aria-busy={syncing} disabled={syncing}>{syncing ? "Syncing…" : "Sync now"}</button>} />
       <ErrorText error={error} />
       {notice && <p role="status" className="mb-4 rounded-md bg-green-50 px-3 py-2 text-sm text-green-800">{notice}</p>}
       {templates === null ? (
-        <p className="text-sm text-gray-500">Loading…</p>
+        <PageLoading />
       ) : templates.length === 0 ? (
         <div className="card p-8 text-center text-sm text-gray-500">
           No templates yet. Create them in WhatsApp Manager → Message templates, then sync.

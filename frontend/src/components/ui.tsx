@@ -10,17 +10,27 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onMouseDown={onClose}>
+    <div className="scrim-in fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onMouseDown={onClose}>
       <div
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
+        className="dialog-in w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <h2 className="mb-4 text-lg font-semibold">{title}</h2>
         {children}
       </div>
+    </div>
+  );
+}
+
+/** Centered spinner while a page or its data loads. */
+export function PageLoading({ label = "Loading…" }: { label?: string }) {
+  return (
+    <div className="page-loading" role="status" aria-live="polite">
+      <span className="spin" aria-hidden="true" />
+      <span className="sr-only">{label}</span>
     </div>
   );
 }

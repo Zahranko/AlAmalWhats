@@ -54,7 +54,7 @@ export default function AccountPage() {
             value={confirm} onChange={(e) => setConfirm(e.target.value)} />
         </div>
         <ErrorText error={error} />
-        <button type="submit" className="btn-primary" disabled={busy}>{busy ? "Saving…" : "Change password"}</button>
+        <button type="submit" className="btn-primary" aria-busy={busy} disabled={busy}>{busy ? "Saving…" : "Change password"}</button>
       </form>
     </>
   );

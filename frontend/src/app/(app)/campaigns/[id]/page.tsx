@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api, ApiError, formatDate, formatPhone, qs, type Campaign, type Message, type Paged } from "@/lib/api";
-import { ErrorText, PageHeader } from "@/components/ui";
+import { ErrorText, PageHeader, PageLoading } from "@/components/ui";
 import { CampaignStatus, Pagination, StatusBadge } from "@/components/messaging";
 
 const PAGE_SIZE = 50;
@@ -42,7 +42,7 @@ export default function CampaignPage() {
     }
   }
 
-  if (!campaign) return error ? <ErrorText error={error} /> : <p className="text-sm text-gray-500">Loading…</p>;
+  if (!campaign) return error ? <ErrorText error={error} /> : <PageLoading />;
   const c = campaign.counts;
   const tiles: [string, number, string][] = [
     ["Waiting", c.queued + c.sending, ""],

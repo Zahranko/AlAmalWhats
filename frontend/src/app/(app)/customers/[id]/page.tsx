@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { api, ApiError, formatDate, formatPhone, type Customer, type MediaFile, type Message } from "@/lib/api";
-import { Badge, ErrorText } from "@/components/ui";
+import { Badge, ErrorText, PageLoading } from "@/components/ui";
 import { FileChip, StatusBadge, UploadButton } from "@/components/messaging";
 import { CustomerForm } from "@/components/customer-form";
 
@@ -37,7 +37,7 @@ export default function CustomerPage() {
     }
   }, [messages]);
 
-  if (!customer) return error ? <ErrorText error={error} /> : <p className="text-sm text-gray-500">Loading…</p>;
+  if (!customer) return error ? <ErrorText error={error} /> : <PageLoading />;
 
   return (
     <div className="flex h-[calc(100dvh-88px)] min-h-[480px] flex-col">
@@ -143,7 +143,7 @@ function ReplyBox({ customer, onSent }: { customer: Customer; onSent: () => void
           value={text} onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }} />
         <UploadButton label="📎" onUploaded={(f) => setFile(f[0])} disabled={busy} />
-        <button type="submit" className="btn-primary" disabled={busy || (!text.trim() && !file)}>{busy ? "Sending…" : "Send"}</button>
+        <button type="submit" className="btn-primary" aria-busy={busy} disabled={busy || (!text.trim() && !file)}>{busy ? "Sending…" : "Send"}</button>
       </div>
     </form>
   );

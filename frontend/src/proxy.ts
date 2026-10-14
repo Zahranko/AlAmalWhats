@@ -6,7 +6,8 @@ export function proxy(request: NextRequest) {
 
   // Optimistic check only: send visitors without a session cookie to /login.
   // Real authentication and role checks happen in the backend on every API call.
-  if (!request.cookies.has("wa_session")) {
+  // wa_access stays for the whole 14-day session; an expired token inside is renewed by the page.
+  if (!request.cookies.has("wa_access")) {
     const url = new URL("/login", request.url);
     if (request.nextUrl.pathname !== "/") url.searchParams.set("next", request.nextUrl.pathname);
     return NextResponse.redirect(url);

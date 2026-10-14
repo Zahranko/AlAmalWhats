@@ -166,7 +166,7 @@ function UserForm({ user, isSelf, onClose, onDone }: { user?: UserRow; isSelf?: 
         <ErrorText error={error} />
         <div className="flex justify-end gap-2">
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" className="btn-primary" disabled={busy}>{busy ? "Saving…" : "Save"}</button>
+          <button type="submit" className="btn-primary" aria-busy={busy} disabled={busy}>{busy ? "Saving…" : "Save"}</button>
         </div>
       </form>
     </Modal>
@@ -193,7 +193,7 @@ function ResetPassword({ user, onClose, onDone }: { user: UserRow; onClose: () =
         <ErrorText error={error} />
         <div className="flex justify-end gap-2">
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" className="btn-primary" disabled={busy}>{busy ? "Saving…" : "Reset password"}</button>
+          <button type="submit" className="btn-primary" aria-busy={busy} disabled={busy}>{busy ? "Saving…" : "Reset password"}</button>
         </div>
       </form>
     </Modal>
@@ -211,7 +211,7 @@ function DeleteUser({ user, onClose, onDone }: { user: UserRow; onClose: () => v
       <div className="mt-4"><ErrorText error={error} /></div>
       <div className="mt-4 flex justify-end gap-2">
         <button className="btn-secondary" onClick={onClose}>Cancel</button>
-        <button className="btn-danger" disabled={busy} onClick={() => submit()}>{busy ? "Deleting…" : "Delete"}</button>
+        <button className="btn-danger" aria-busy={busy} disabled={busy} onClick={() => submit()}>{busy ? "Deleting…" : "Delete"}</button>
       </div>
     </Modal>
   );

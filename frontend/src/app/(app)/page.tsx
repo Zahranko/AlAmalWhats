@@ -151,7 +151,7 @@ function DailyChart({ daily }: { daily: Daily[] }) {
                 aria-label={`Messages sent per day, ${daily.length} days, peak ${max}. Use "Show table" for the numbers.`}>
                 {daily.map((x, i) => (
                   <div key={x.day} className="relative flex h-full flex-1 items-end" onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)}>
-                    <div className={`w-full rounded-t ${hover === i ? "bg-brand-700" : "bg-brand-600"}`}
+                    <div className={`rise w-full rounded-t ${hover === i ? "bg-brand-700" : "bg-brand-600"}`}
                       style={{ height: x.sent ? `max(2px, ${(x.sent / top) * 100}%)` : 0 }} />
                     {hover === i && (
                       <div className={`pointer-events-none absolute bottom-full z-10 mb-2 w-40 rounded-md border border-gray-200 bg-white p-2 text-xs shadow-lg ${i > daily.length / 2 ? "right-0" : "left-0"}`}>

@@ -88,7 +88,7 @@ export function CustomerForm({ customer, onClose, onSaved, onDeleted }: {
           </div>
           <div className="flex gap-2">
             <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn-primary" disabled={busy}>{busy ? "Saving…" : "Save"}</button>
+            <button type="submit" className="btn-primary" aria-busy={busy} disabled={busy}>{busy ? "Saving…" : "Save"}</button>
           </div>
         </div>
         {confirmDelete && <p className="text-xs text-gray-500">Message history is kept but no longer linked to this customer. Queued messages are cancelled.</p>}

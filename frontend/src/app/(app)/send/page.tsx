@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { api, ApiError, formatPhone, qs, type Customer, type MediaFile, type Message, type Paged, type Template } from "@/lib/api";
-import { ErrorText, PageHeader } from "@/components/ui";
+import { ErrorText, PageHeader, PageLoading } from "@/components/ui";
 import {
   FileChip, StatusBadge, TemplateFields, TemplatePreview, UploadButton,
   emptyValues, needsMedia, templateLabel, type TemplateValues,
@@ -17,7 +17,7 @@ const newItem = (): Item => ({ key: nextKey++, templateId: null, values: emptyVa
 
 export default function SendPage() {
   return (
-    <Suspense fallback={<p className="text-sm text-gray-500">Loading…</p>}>
+    <Suspense fallback={<PageLoading />}>
       <SendForm />
     </Suspense>
   );
@@ -173,7 +173,7 @@ function SendForm() {
         </section>
 
         <ErrorText error={error} />
-        <button type="submit" className="btn-primary" disabled={busy || items.some((i) => !i.templateId)}>
+        <button type="submit" className="btn-primary" aria-busy={busy} disabled={busy || items.some((i) => !i.templateId)}>
           {busy ? "Sending…" : schedule ? "Schedule" : "Send now"}
         </button>
       </form>

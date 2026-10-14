@@ -1,6 +1,4 @@
-using System.ComponentModel.DataAnnotations;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
+﻿using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -20,7 +18,7 @@ public record ApiError(string Error);
 
 [ApiController]
 [Route("api/auth")]
-public class AuthController(AppDbContext db, AuditService audit, IOptions<AuthOptions> authOptions) : ControllerBase
+public class AuthController(AppDbContext db, AuditService audit, TokenService tokens, IOptions<AuthOptions> authOptions) : ControllerBase
 {
     private const string InvalidCredentials = "Invalid email or password.";
 
@@ -67,16 +65,38 @@ public class AuthController(AppDbContext db, AuditService audit, IOptions<AuthOp
         audit.Record(AuditActions.Login, actor: user);
         await db.SaveChangesAsync();
 
-        await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, AuthSetup.CreatePrincipal(user));
+        await tokens.IssueAsync(user);
         return ToMe(user);
     }
 
+    /// <summary>
+    /// Exchanges the refresh cookie for a new access token and refresh token. The frontend calls
+    /// this when a request answers 401 because the access token (15 minutes) ran out.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpPost("refresh")]
+    public async Task<ActionResult<MeDto>> Refresh()
+    {
+        var (outcome, user) = await tokens.RefreshAsync();
+        if (outcome == RefreshOutcome.Rejected)
+        {
+            tokens.ClearCookies();
+            return Unauthorized(new ApiError("Your session has ended. Please sign in again."));
+        }
+        return ToMe(user!);
+    }
+
+    /// <summary>Works signed in or not, so a browser whose access token expired can still sign out.</summary>
+    [AllowAnonymous]
     [HttpPost("logout")]
     public async Task<IActionResult> Logout()
     {
-        audit.Record(AuditActions.Logout);
-        await db.SaveChangesAsync();
-        await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        if (User.Identity?.IsAuthenticated == true)
+        {
+            audit.Record(AuditActions.Logout);
+            await db.SaveChangesAsync();
+        }
+        await tokens.SignOutAsync();
         return NoContent();
     }
 
@@ -106,8 +126,9 @@ public class AuthController(AppDbContext db, AuditService audit, IOptions<AuthOp
         audit.Record(AuditActions.PasswordChanged, actor: user);
         await db.SaveChangesAsync();
 
-        // Re-issue this session's cookie with the new stamp so the current browser stays signed in.
-        await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, AuthSetup.CreatePrincipal(user));
+        // The new stamp ends every session; start a fresh one so this browser stays signed in.
+        await tokens.RevokeCurrentAsync();
+        await tokens.IssueAsync(user);
         return NoContent();
     }
 

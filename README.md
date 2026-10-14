@@ -40,7 +40,11 @@ Set `API_URL` for the frontend if the backend runs elsewhere (production builds 
 ## Security in place (phase 2)
 
 - bcrypt password hashes (work factor 12), min 8 chars with letters and numbers
-- HttpOnly, SameSite=Strict session cookie; 30 min sliding timeout; `Secure` outside development
+- Sessions are a 15-minute JWT access token plus a 14-day refresh token, both in HttpOnly,
+  SameSite=Strict cookies (`Secure` outside development). The browser renews them when a request
+  answers 401; each refresh token works once and is replaced, a reused one ends that session, and
+  a browser unused for 14 days signs in again. The signing key is `Auth:JwtKey` (base64) if set,
+  otherwise generated once and kept encrypted in the settings table
 - Lockout after 5 failed logins for 15 minutes (admins can unlock); login rate limit of 10/min per IP
 - Every request re-checks the user: disabling a user, changing their role or resetting their
   password ends their sessions immediately
@@ -48,7 +52,7 @@ Set `API_URL` for the frontend if the backend runs elsewhere (production builds 
 - Users created or reset by an admin must change their password before any other API call
 - Audit log of logins, failures, lockouts, password changes and every user change, with IP
 
-Settings in `appsettings.json` under `Auth`: `SessionMinutes`, `MaxFailedLogins`, `LockoutMinutes`.
+Settings in `appsettings.json` under `Auth`: `AccessTokenMinutes`, `RefreshTokenDays`, `MaxFailedLogins`, `LockoutMinutes`.
 
 ## WhatsApp configuration
 

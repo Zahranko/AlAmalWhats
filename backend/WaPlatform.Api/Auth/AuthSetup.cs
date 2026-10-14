@@ -1,9 +1,10 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using System.Threading.RateLimiting;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 using WaPlatform.Api.Data;
 using WaPlatform.Api.Domain;
 
@@ -11,7 +12,10 @@ namespace WaPlatform.Api.Auth;
 
 public class AuthOptions
 {
-    public int SessionMinutes { get; set; } = 30;
+    /// <summary>How long an access token is good for; the browser then renews it with the refresh token.</summary>
+    public int AccessTokenMinutes { get; set; } = 15;
+    /// <summary>A browser stays signed in this long after it was last used.</summary>
+    public int RefreshTokenDays { get; set; } = 14;
     public int MaxFailedLogins { get; set; } = 5;
     public int LockoutMinutes { get; set; } = 15;
 }
@@ -24,44 +28,56 @@ public static class AppClaims
 
 public static class AuthSetup
 {
-    public const string CookieName = "wa_session";
     public const string LoginRateLimit = "login";
 
     public static IServiceCollection AddAppAuth(this IServiceCollection services, IConfiguration config, IHostEnvironment env)
     {
-        var opts = config.GetSection("Auth").Get<AuthOptions>() ?? new AuthOptions();
         services.Configure<AuthOptions>(config.GetSection("Auth"));
 
-        services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-            .AddCookie(o =>
+        services.AddSingleton<JwtKeyProvider>();
+        services.AddScoped<TokenService>();
+        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
+        // Configured here rather than inline so the signing key can come from the database.
+        services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme).Configure<JwtKeyProvider>((o, keys) =>
+        {
+            o.MapInboundClaims = false;
+            o.TokenValidationParameters = new TokenValidationParameters
             {
-                o.Cookie.Name = CookieName;
-                o.Cookie.HttpOnly = true;
-                o.Cookie.SameSite = SameSiteMode.Strict;
-                // Dev runs over plain http behind the Next.js dev server; production must be HTTPS.
-                o.Cookie.SecurePolicy = env.IsDevelopment() ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
-                o.ExpireTimeSpan = TimeSpan.FromMinutes(opts.SessionMinutes);
-                o.SlidingExpiration = true;
-
-                // This is an API: answer with status codes instead of redirecting to a login page.
-                o.Events.OnRedirectToLogin = ctx => { ctx.Response.StatusCode = 401; return Task.CompletedTask; };
-                o.Events.OnRedirectToAccessDenied = ctx => { ctx.Response.StatusCode = 403; return Task.CompletedTask; };
-
+                ValidIssuer = TokenService.Issuer,
+                ValidAudience = TokenService.Issuer,
+                IssuerSigningKeyResolver = (_, _, _, _) => [keys.Key],
+                ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
+                ClockSkew = TimeSpan.FromSeconds(30),
+                NameClaimType = ClaimTypes.Name,
+                RoleClaimType = ClaimTypes.Role,
+            };
+            o.Events = new JwtBearerEvents
+            {
+                // The access token travels in an HttpOnly cookie, not an Authorization header.
+                OnMessageReceived = ctx =>
+                {
+                    ctx.Token = ctx.Request.Cookies[TokenService.AccessCookie];
+                    return Task.CompletedTask;
+                },
                 // Re-check the user on every request so disabling a user, changing their role
                 // or resetting their password logs them out immediately.
-                o.Events.OnValidatePrincipal = async ctx =>
+                OnTokenValidated = async ctx =>
                 {
                     var db = ctx.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
                     var stamp = ctx.Principal?.FindFirstValue(AppClaims.SecurityStamp);
                     var valid = int.TryParse(ctx.Principal?.FindFirstValue(ClaimTypes.NameIdentifier), out var id)
                         && await db.Users.AsNoTracking().AnyAsync(u => u.Id == id && u.IsActive && u.SecurityStamp == stamp);
-                    if (!valid)
-                    {
-                        ctx.RejectPrincipal();
-                        await ctx.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-                    }
-                };
-            });
+                    if (!valid) ctx.Fail("Session ended.");
+                },
+                // An API: a bare 401 (the frontend then tries /api/auth/refresh), no WWW-Authenticate details.
+                OnChallenge = ctx =>
+                {
+                    ctx.HandleResponse();
+                    ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                    return Task.CompletedTask;
+                },
+            };
+        });
 
         services.AddAuthorizationBuilder()
             // Every endpoint requires a signed-in user unless marked [AllowAnonymous].
@@ -78,8 +94,8 @@ public static class AuthSetup
         return services;
     }
 
-    public static ClaimsPrincipal CreatePrincipal(User user) =>
-        new(new ClaimsIdentity(
+    public static ClaimsIdentity CreateIdentity(User user) =>
+        new(
         [
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(ClaimTypes.Name, user.Name),
@@ -87,7 +103,7 @@ public static class AuthSetup
             new Claim(ClaimTypes.Role, user.Role),
             new Claim(AppClaims.SecurityStamp, user.SecurityStamp),
             new Claim(AppClaims.MustChangePassword, user.MustChangePassword ? "1" : "0"),
-        ], CookieAuthenticationDefaults.AuthenticationScheme));
+        ], JwtBearerDefaults.AuthenticationScheme);
 
     /// <summary>
     /// Users created or reset by an admin must set their own password before using anything

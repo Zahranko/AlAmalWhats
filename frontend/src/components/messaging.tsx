@@ -161,7 +161,7 @@ export function UploadButton({ multiple, onUploaded, label = "Attach file", disa
     <div>
       <input ref={input} type="file" className="hidden" multiple={multiple} onChange={(e) => onChange(e.target.files)}
         accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.jpg,.jpeg,.png,.mp4,.3gp,.mp3,.m4a,.aac,.amr,.ogg" />
-      <button type="button" className="btn-secondary" disabled={busy || disabled} onClick={() => input.current?.click()}>
+      <button type="button" className="btn-secondary" aria-busy={busy} disabled={busy || disabled} onClick={() => input.current?.click()}>
         {busy ? "Uploading…" : label}
       </button>
       {error && <p role="alert" className="mt-1 text-sm text-red-700">{error}</p>}

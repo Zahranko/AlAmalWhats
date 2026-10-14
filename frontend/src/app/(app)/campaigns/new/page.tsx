@@ -292,7 +292,7 @@ export default function NewCampaignPage() {
               <ul className="text-xs text-red-700">{rowErrors.map((r) => <li key={r.row}>Row {r.row}: {r.error}</li>)}</ul>
             )}
             <div className="flex gap-2">
-              <button className="btn-primary" disabled={busy || !name.trim() || toSend.length === 0 || (problems.length > 0 && !skipProblems)} onClick={create}>
+              <button className="btn-primary" aria-busy={busy} disabled={busy || !name.trim() || toSend.length === 0 || (problems.length > 0 && !skipProblems)} onClick={create}>
                 {busy ? "Creating…" : schedule ? `Schedule ${toSend.length} messages` : `Send ${toSend.length} messages`}
               </button>
               <Link href="/campaigns" className="btn-secondary">Cancel</Link>

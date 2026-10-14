@@ -161,13 +161,13 @@ export class ApiError extends Error {
 type Options = { method?: string; body?: unknown; redirectOn401?: boolean; signal?: AbortSignal };
 
 export async function api<T = void>(path: string, { method = "GET", body, redirectOn401 = true, signal }: Options = {}): Promise<T> {
-  const res = await fetch(`/api${path}`, {
+  const res = await withSession(redirectOn401, () => fetch(`/api${path}`, {
     method,
     headers: body === undefined ? undefined : { "Content-Type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
     credentials: "same-origin",
     signal,
-  });
+  }));
 
   if (res.ok) {
     return (res.status === 204 ? undefined : await res.json()) as T;
@@ -175,9 +175,6 @@ export async function api<T = void>(path: string, { method = "GET", body, redire
 
   const data = await res.json().catch(() => null);
 
-  if (res.status === 401 && redirectOn401) {
-    hardNavigate(`/login?next=${encodeURIComponent(window.location.pathname)}`);
-  }
   if (res.status === 403 && data?.code === "password_change_required" && window.location.pathname !== "/account") {
     hardNavigate("/account");
   }
@@ -187,12 +184,57 @@ export async function api<T = void>(path: string, { method = "GET", body, redire
 
 /** Multipart upload (files etc.); same error handling as api(). */
 export async function upload<T>(path: string, form: FormData): Promise<T> {
-  const res = await fetch(`/api${path}`, { method: "POST", body: form, credentials: "same-origin" });
+  const res = await withSession(true, () => fetch(`/api${path}`, { method: "POST", body: form, credentials: "same-origin" }));
   if (res.ok) return (await res.json()) as T;
   const data = await res.json().catch(() => null);
-  if (res.status === 401) hardNavigate(`/login?next=${encodeURIComponent(window.location.pathname)}`);
   if (res.status === 413) throw new ApiError("The files are too large to upload at once.", 413);
   throw new ApiError(errorMessage(res.status, data), res.status, data?.code, data);
+}
+
+/**
+ * Runs a request; if it answers 401 because the 15-minute access token ran out, renews the
+ * session with the refresh token (good for 14 days) and runs it once more. Only when the session
+ * itself is over does the user go to the login page.
+ */
+async function withSession(redirectOn401: boolean, send: () => Promise<Response>): Promise<Response> {
+  const res = await send();
+  if (res.status !== 401 || !redirectOn401) return res;
+
+  const renewed = await refreshSession();
+  if (renewed === "renewed") {
+    const again = await send();
+    if (again.status !== 401) return again;
+  } else if (renewed === "unavailable") {
+    throw new ApiError("Can't reach the server right now. Check the connection and try again.", 503);
+  }
+  hardNavigate(`/login?next=${encodeURIComponent(window.location.pathname)}`);
+  return res;
+}
+
+let refreshing: Promise<"renewed" | "ended" | "unavailable"> | null = null;
+
+/**
+ * One renewal at a time: requests that fail together share it, and the browser-wide lock keeps
+ * two tabs from spending the same refresh token (each new token replaces the last; the server
+ * treats an old one coming back as stolen and ends the session).
+ */
+function refreshSession() {
+  refreshing ??= (async () => {
+    const exchange = async () => {
+      try {
+        const r = await fetch("/api/auth/refresh", { method: "POST", credentials: "same-origin" });
+        return r.ok ? "renewed" as const : r.status === 401 ? "ended" as const : "unavailable" as const;
+      } catch {
+        return "unavailable" as const;
+      }
+    };
+    try {
+      return navigator.locks ? await navigator.locks.request("wa-session-refresh", exchange) : await exchange();
+    } finally {
+      refreshing = null;
+    }
+  })();
+  return refreshing;
 }
 
 /** Query string from an object, skipping empty values. */

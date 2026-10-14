@@ -50,7 +50,7 @@ export default function LoginPage() {
               value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
           <ErrorText error={error} />
-          <button type="submit" className="btn-primary w-full" disabled={busy}>
+          <button type="submit" className="btn-primary w-full" aria-busy={busy} disabled={busy}>
             {busy ? "Signing in…" : "Sign in"}
           </button>
         </form>

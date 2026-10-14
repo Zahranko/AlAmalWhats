@@ -1,4 +1,4 @@
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using WaPlatform.Api.Domain;
@@ -17,6 +17,7 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options) : DbCo
     public DbSet<Campaign> Campaigns => Set<Campaign>();
     public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
     public DbSet<AppSetting> Settings => Set<AppSetting>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     // Cookie-signing keys, shared across app restarts and recycles (in-memory keys would log everyone out).
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
@@ -66,6 +67,19 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options) : DbCo
             e.Property(t => t.Category).HasMaxLength(32);
             e.Property(t => t.Status).HasMaxLength(32);
             e.Property(t => t.ParameterFormat).HasMaxLength(16);
+        });
+
+        b.Entity<RefreshToken>(e =>
+        {
+            e.ToTable("refresh_tokens");
+            e.HasIndex(t => t.TokenHash).IsUnique();
+            e.HasIndex(t => t.FamilyId);
+            e.HasIndex(t => t.ExpiresAt);
+            e.Property(t => t.TokenHash).HasMaxLength(64);
+            e.Property(t => t.FamilyId).HasMaxLength(32);
+            e.Property(t => t.SecurityStamp).HasMaxLength(64);
+            e.Property(t => t.CreatedByIp).HasMaxLength(64);
+            e.HasOne(t => t.User).WithMany().HasForeignKey(t => t.UserId).OnDelete(DeleteBehavior.Cascade);
         });
 
         b.Entity<Customer>(e =>
