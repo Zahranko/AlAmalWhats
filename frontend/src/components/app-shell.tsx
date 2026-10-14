@@ -45,7 +45,7 @@ export const adminOnlyPaths = adminNav.map((n) => n.href);
 
 export function AppShell({ children }: { children: ReactNode }) {
   const [me, setMe] = useState<Me | null>(null);
-  const [unanswered, setUnanswered] = useState(0);
+  const [unread, setUnread] = useState(0);
   const [live, setLive] = useState(0);
   const pathname = usePathname();
   const router = useRouter();
@@ -79,10 +79,10 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => { abort.abort(); clearInterval(t); };
   }, [me]);
 
-  // Badge on the Inbox icon: conversations waiting for a reply.
+  // Badge on the Inbox icon: conversations with unread messages.
   useEffect(() => {
     if (!me || me.mustChangePassword || !live) return;
-    api<InboxResult>("/inbox?pageSize=1").then((r) => setUnanswered(r.counts.unanswered)).catch(() => {});
+    api<InboxResult>("/inbox?pageSize=1").then((r) => setUnread(r.counts.unread)).catch(() => {});
   }, [me, live, pathname]);
 
   if (!me) {
@@ -104,7 +104,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Link>
           {nav.map((item) => (
             <RailLink key={item.href} item={item} active={isActive(pathname, item.href)}
-              count={item.href === "/inbox" ? unanswered : 0} />
+              count={item.href === "/inbox" ? unread : 0} />
           ))}
           {isAdmin && (
             <>
@@ -145,7 +145,7 @@ function isActive(pathname: string, href: string) {
 function RailLink({ item, active, count = 0 }: { item: NavItem; active: boolean; count?: number }) {
   return (
     <Link href={item.href} className="rail-btn" aria-current={active ? "page" : undefined}
-      aria-label={count ? `${item.label}, ${count} waiting for a reply` : item.label} data-tip={item.label}>
+      aria-label={count ? `${item.label}, ${count} unread` : item.label} data-tip={item.label}>
       <i className={`ph ${item.icon}`} aria-hidden="true" />
       {count > 0 && <span className="count num">{count > 99 ? "99+" : count}</span>}
     </Link>

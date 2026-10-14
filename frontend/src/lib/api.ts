@@ -67,6 +67,8 @@ export interface Customer {
   optedOutAt: string | null;
   lastInboundAt: string | null;
   lastMessageAt: string | null;
+  /** Staff have read the conversation up to this message time. */
+  lastReadAt: string | null;
   canReply: boolean;
   createdAt: string;
 }
@@ -131,6 +133,8 @@ export interface InboxItem {
   } | null;
   /** The customer's messages since our last message to them. */
   unanswered: number;
+  /** The customer's messages nobody has opened the conversation to read yet. */
+  unread: number;
 }
 
 export interface InboxResult {
@@ -138,7 +142,7 @@ export interface InboxResult {
   total: number;
   page: number;
   pageSize: number;
-  counts: { all: number; unanswered: number; open: number; optedOut: number };
+  counts: { all: number; unanswered: number; open: number; optedOut: number; unread: number };
 }
 
 export interface Paged<T> {

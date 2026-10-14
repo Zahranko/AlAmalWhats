@@ -251,6 +251,10 @@ namespace WaPlatform.Api.Migrations
                         .HasColumnType("datetime2")
                         .HasColumnName("last_message_at");
 
+                    b.Property<DateTime?>("LastReadAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("last_read_at");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)

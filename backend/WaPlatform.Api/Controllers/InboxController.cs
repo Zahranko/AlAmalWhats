@@ -3,22 +3,24 @@ using Microsoft.EntityFrameworkCore;
 using WaPlatform.Api.Data;
 using WaPlatform.Api.Domain;
 using WaPlatform.Api.Services;
+using WaPlatform.Api.WhatsApp;
 
 namespace WaPlatform.Api.Controllers;
 
 public record InboxLastMessage(string Direction, string Type, string? TemplateName, string? Body, string? MediaFileName,
     string Status, DateTime CreatedAt);
 
-/// <summary>A conversation in the inbox: the customer, their last message and how many of theirs are unanswered.</summary>
-public record InboxItem(CustomerDto Customer, InboxLastMessage? Last, int Unanswered);
+/// <summary>A conversation in the inbox: the customer, their last message, and how many of theirs are unanswered / unread.</summary>
+public record InboxItem(CustomerDto Customer, InboxLastMessage? Last, int Unanswered, int Unread);
 
-public record InboxCounts(int All, int Unanswered, int Open, int OptedOut);
+public record InboxCounts(int All, int Unanswered, int Open, int OptedOut, int Unread);
 
 public record InboxResult(List<InboxItem> Items, int Total, int Page, int PageSize, InboxCounts Counts);
 
 [ApiController]
 [Route("api/inbox")]
-public class InboxController(AppDbContext db, MessageService messages, ChangeFeed feed) : ControllerBase
+public class InboxController(AppDbContext db, MessageService messages, ChangeFeed feed, WhatsAppClient client,
+    ILogger<InboxController> log) : ControllerBase
 {
     /// <summary>
     /// Long poll: answers as soon as messages or conversations change (version differs from
@@ -54,7 +56,8 @@ public class InboxController(AppDbContext db, MessageService messages, ChangeFee
         var unansweredQ = q.Where(c => c.LastInboundAt != null && (c.LastMessageAt == null || c.LastInboundAt > c.LastMessageAt));
         var openQ = q.Where(c => c.LastInboundAt > windowStart);
         var counts = new InboxCounts(await q.CountAsync(ct), await unansweredQ.CountAsync(ct), await openQ.CountAsync(ct),
-            await q.CountAsync(c => c.OptedOut, ct));
+            await q.CountAsync(c => c.OptedOut, ct),
+            await q.CountAsync(c => c.LastInboundAt != null && (c.LastReadAt == null || c.LastInboundAt > c.LastReadAt), ct));
 
         q = filter switch
         {
@@ -78,10 +81,44 @@ public class InboxController(AppDbContext db, MessageService messages, ChangeFee
                     .FirstOrDefault(),
                 Unanswered = db.Messages.Count(m => m.CustomerId == c.Id && m.Direction == MessageDirections.In
                     && (c.LastMessageAt == null || m.CreatedAt > c.LastMessageAt)),
+                Unread = db.Messages.Count(m => m.CustomerId == c.Id && m.Direction == MessageDirections.In
+                    && (c.LastReadAt == null || m.CreatedAt > c.LastReadAt)),
             })
             .ToListAsync(ct);
 
-        var items = rows.Select(r => new InboxItem(CustomerDto.From(r.Customer), r.Last, r.Unanswered)).ToList();
+        var items = rows.Select(r => new InboxItem(CustomerDto.From(r.Customer), r.Last, r.Unanswered, r.Unread)).ToList();
         return new InboxResult(items, total, page, pageSize, counts);
+    }
+
+    /// <summary>
+    /// Staff opened the conversation: clears its unread count and sends the customer read receipts
+    /// (blue ticks) for everything they wrote, as WhatsApp does.
+    /// </summary>
+    [HttpPost("{id:int}/read")]
+    public async Task<IActionResult> MarkRead(int id, CancellationToken ct)
+    {
+        var customer = await db.Customers.FindAsync([id], ct);
+        if (customer is null) return NotFound();
+        if (customer.LastInboundAt is null || customer.LastReadAt >= customer.LastInboundAt) return NoContent();
+
+        var since = customer.LastReadAt;
+        customer.LastReadAt = customer.LastInboundAt;
+        await db.SaveChangesAsync(ct);
+
+        // Marking the newest message read marks the earlier ones too. Best effort: the inbox is read either way.
+        var wamid = await db.Messages.AsNoTracking()
+            .Where(m => m.CustomerId == id && m.Direction == MessageDirections.In && m.WaMessageId != null
+                && (since == null || m.CreatedAt > since))
+            .OrderByDescending(m => m.CreatedAt).ThenByDescending(m => m.Id)
+            .Select(m => m.WaMessageId).FirstOrDefaultAsync(ct);
+        if (wamid is not null)
+        {
+            try { await client.MarkReadAsync(wamid, ct); }
+            catch (Exception e) when (e is WhatsAppApiException or HttpRequestException)
+            {
+                log.LogWarning("Could not send the read receipt for {Wamid}: {Error}", wamid, e.Message);
+            }
+        }
+        return NoContent();
     }
 }

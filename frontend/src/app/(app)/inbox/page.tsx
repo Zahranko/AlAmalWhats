@@ -194,10 +194,10 @@ function ConversationList({ inbox, error, activeId, query, filter, onOpen, onCle
 
   return (
     <>
-      {inbox.items.map(({ customer: c, last, unanswered }) => {
+      {inbox.items.map(({ customer: c, last, unread }) => {
         const when = last?.createdAt ?? c.lastMessageAt ?? c.lastInboundAt;
         return (
-          <button key={c.id} type="button" role="listitem" className={`conv ${unanswered ? "unread" : ""}`}
+          <button key={c.id} type="button" role="listitem" className={`conv ${unread ? "unread" : ""}`}
             aria-current={c.id === activeId} onClick={() => onOpen(c.id)}>
             <Avatar customer={c} />
             <div>
@@ -208,7 +208,7 @@ function ConversationList({ inbox, error, activeId, query, filter, onOpen, onCle
               <div className="bottom">
                 <span className="preview"><Preview last={last} /></span>
                 {c.optedOut && <i className="ph-fill ph-prohibit flag-out" aria-label="Opted out" />}
-                {unanswered > 0 && <span className="pill-count num" aria-label={`${unanswered} waiting for a reply`}>{unanswered}</span>}
+                {unread > 0 && c.id !== activeId && <span className="pill-count num" aria-label={`${unread} unread`}>{unread}</span>}
               </div>
             </div>
           </button>
@@ -245,6 +245,21 @@ function Conversation({ id, tick, infoOpen, onToggleInfo, onBack, onActivity, no
   const keepScroll = useRef<number | null>(null);
 
   const reload = useCallback(() => setLocalTick((n) => n + 1), []);
+
+  // Opening the chat reads it, like WhatsApp: clears the unread count and sends the patient blue ticks.
+  // Only while the tab is visible, so a chat left open in a background tab still shows new messages as unread.
+  const unread = !!customer?.lastInboundAt && (!customer.lastReadAt || customer.lastInboundAt > customer.lastReadAt);
+  useEffect(() => {
+    if (!unread) return;
+    const markRead = () => {
+      if (document.visibilityState !== "visible") return;
+      document.removeEventListener("visibilitychange", markRead);
+      api(`/inbox/${id}/read`, { method: "POST" }).then(onActivity).catch(() => {});
+    };
+    markRead();
+    document.addEventListener("visibilitychange", markRead);
+    return () => document.removeEventListener("visibilitychange", markRead);
+  }, [id, unread, onActivity]);
 
   useEffect(() => {
     let cancelled = false;

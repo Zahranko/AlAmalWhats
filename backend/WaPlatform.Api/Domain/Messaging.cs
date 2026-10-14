@@ -35,6 +35,8 @@ public class Customer
     public DateTime? OptedOutAt { get; set; }
     public DateTime? LastInboundAt { get; set; }
     public DateTime? LastMessageAt { get; set; }
+    /// <summary>Staff have read the conversation up to here (a message time); later messages from the customer are unread.</summary>
+    public DateTime? LastReadAt { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 

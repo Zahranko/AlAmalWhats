@@ -84,6 +84,15 @@ public class WhatsAppClient(HttpClient http, IOptionsMonitor<WhatsAppOptions> op
             ?? throw new WhatsAppApiException("Meta accepted the request but returned no message id.", 502, null);
     }
 
+    /// <summary>Marks a received message (and every earlier one in the chat) as read: the customer sees blue ticks.</summary>
+    public Task MarkReadAsync(string wamid, CancellationToken ct = default) =>
+        SendAsync(HttpMethod.Post, $"{O.PhoneNumberId}/messages", new JsonObject
+        {
+            ["messaging_product"] = "whatsapp",
+            ["status"] = "read",
+            ["message_id"] = wamid,
+        }, ct);
+
     /// <summary>Sends an approved template with no parameters; returns Meta's message id (wamid).</summary>
     public Task<string> SendTemplateAsync(string to, string templateName, string languageCode, CancellationToken ct = default) =>
         SendMessageAsync(to, "template", new JsonObject

@@ -10,10 +10,10 @@ using WaPlatform.Api.Services;
 namespace WaPlatform.Api.Controllers;
 
 public record CustomerDto(int Id, string Name, string Phone, string? FileNumber, string? Notes, bool OptedOut,
-    DateTime? OptedOutAt, DateTime? LastInboundAt, DateTime? LastMessageAt, bool CanReply, DateTime CreatedAt)
+    DateTime? OptedOutAt, DateTime? LastInboundAt, DateTime? LastMessageAt, DateTime? LastReadAt, bool CanReply, DateTime CreatedAt)
 {
     public static CustomerDto From(Customer c) => new(c.Id, c.Name, c.Phone, c.FileNumber, c.Notes, c.OptedOut,
-        c.OptedOutAt, c.LastInboundAt, c.LastMessageAt, c.CanReceiveFreeForm(DateTime.UtcNow), c.CreatedAt);
+        c.OptedOutAt, c.LastInboundAt, c.LastMessageAt, c.LastReadAt, c.CanReceiveFreeForm(DateTime.UtcNow), c.CreatedAt);
 }
 
 public record CustomerRequest(
