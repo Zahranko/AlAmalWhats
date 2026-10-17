@@ -207,7 +207,8 @@ async function withSession(redirectOn401: boolean, send: () => Promise<Response>
   } else if (renewed === "unavailable") {
     throw new ApiError("Can't reach the server right now. Check the connection and try again.", 503);
   }
-  hardNavigate(`/login?next=${encodeURIComponent(window.location.pathname)}`);
+  // The query string too: a link like /inbox?phone=… must land where it pointed after signing in.
+  hardNavigate(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
   return res;
 }
 

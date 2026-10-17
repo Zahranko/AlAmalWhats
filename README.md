@@ -144,6 +144,10 @@ Admins create keys under **WhatsApp → API keys**. Calls send `X-Api-Key: wak_.
 - `GET /api/v1/messages/{id}`: status (each key sees only its own messages)
 - `GET /api/v1/templates`: approved templates and their variables
 
+### Linking to a patient's chat
+
+Other hospital systems open a chat with `https://whatsapp.alamalhospitaljo.com/inbox?phone=962791234567&name=...&file=...`. The inbox finds the customer with that number, adds them (name and file number from the link) if they have never been messaged, and opens their chat. Signing in on the way keeps the link.
+
 ### "Chat with us" template buttons
 
 Meta doesn't allow `wa.me` links in template buttons. Use a **Visit website** button pointing to

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
-import { api, ApiError, formatDate, formatPhone, formatSize, qs, upload, type Customer, type InboxResult, type MediaFile, type Message } from "@/lib/api";
+import { api, ApiError, formatDate, formatPhone, formatSize, qs, upload, type Customer, type InboxResult, type MediaFile, type Message, type Paged } from "@/lib/api";
 import { CustomerForm } from "@/components/customer-form";
 import { useLiveVersion } from "@/components/app-shell";
 import { Avatar, dayKey, dayLabel, listTime, MessageRow, Preview, windowLeft } from "@/components/inbox";
@@ -87,6 +87,25 @@ function Inbox() {
     return () => document.removeEventListener("keydown", onKey);
   }, [infoOpen]);
 
+  // /inbox?phone=962…&name=…&file=… is how the hospital's other systems link to a patient's chat
+  // (Al Amal Business's WhatsApp icons): find that number's customer, or add them if they have
+  // never been messaged, then open the chat as if it had been clicked in the list.
+  const linkPhone = activeId ? null : params.get("phone");
+  const linkName = params.get("name");
+  const linkFile = params.get("file");
+  useEffect(() => {
+    if (!linkPhone) return;
+    let cancelled = false;
+    customerForPhone(linkPhone, linkName, linkFile)
+      .then((id) => { if (!cancelled) router.replace(`/inbox?c=${id}`, { scroll: false }); })
+      .catch((e) => {
+        if (cancelled) return;
+        notify("ph-warning-circle", e instanceof ApiError ? e.message : "Could not open that chat.");
+        router.replace("/inbox", { scroll: false });
+      });
+    return () => { cancelled = true; };
+  }, [linkPhone, linkName, linkFile, router, notify]);
+
   const openChat = (id: number) => router.replace(`/inbox?c=${id}`, { scroll: false });
   const closeChat = () => { setInfoOpen(false); router.replace("/inbox", { scroll: false }); };
   const changeFilter = (f: Filter) => { setFilter(f); setLimit(PAGE); setInbox(null); };
@@ -154,6 +173,27 @@ function Inbox() {
       </div>
     </div>
   );
+}
+
+/** The id of the customer with this number, adding them first if there is none. */
+async function customerForPhone(phone: string, name: string | null, fileNumber: string | null): Promise<number> {
+  const digits = phone.replace(/\D/g, "");
+  const find = async () =>
+    (await api<Paged<Customer>>(`/customers${qs({ search: digits, pageSize: 20 })}`)).items.find((c) => c.phone === digits)?.id;
+  const found = await find();
+  if (found) return found;
+  try {
+    const created = await api<Customer>("/customers", {
+      method: "POST",
+      body: { name: name?.trim().slice(0, 200) || digits, phone: digits, fileNumber: fileNumber?.trim().slice(0, 50) || null },
+    });
+    return created.id;
+  } catch (e) {
+    // Someone added the same number a moment ago (409): use theirs.
+    const again = e instanceof ApiError && e.status === 409 ? await find() : undefined;
+    if (again) return again;
+    throw e;
+  }
 }
 
 function ConversationList({ inbox, error, activeId, query, filter, onOpen, onClear, onMore }: {

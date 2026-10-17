@@ -10,7 +10,8 @@ export function proxy(request: NextRequest) {
   // wa_session is the cookie from before refresh tokens, accepted until those sessions run out.
   if (!request.cookies.has("wa_access") && !request.cookies.has("wa_session")) {
     const url = new URL("/login", request.url);
-    if (request.nextUrl.pathname !== "/") url.searchParams.set("next", request.nextUrl.pathname);
+    // With its query string, so a link like /inbox?phone=… still opens that chat after signing in.
+    if (request.nextUrl.pathname !== "/") url.searchParams.set("next", request.nextUrl.pathname + request.nextUrl.search);
     return NextResponse.redirect(url);
   }
 }
