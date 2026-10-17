@@ -139,7 +139,8 @@ normally reaches the API through the frontend's `/api` proxy.
 
 Admins create keys under **WhatsApp → API keys**. Calls send `X-Api-Key: wak_...`:
 
-- `POST /api/v1/messages` `{ phone, name?, template, language?, header?, body?, buttons?, document?: { fileName, contentBase64 }, scheduledAt? }` → 202 `{ id, status }`
+- `POST /api/v1/messages` `{ phone, name?, fileNumber?, template, language?, header?, body?, buttons?, document?: { fileName, contentBase64 }, scheduledAt? }` → 202 `{ id, status }`. The customer is created if new; `name` replaces a name that is only the phone number and `fileNumber` fills an empty one, never overwriting what staff typed
+- `POST /api/v1/campaigns` `{ name, template, language?, recipients: [{ ref?, phone, name?, fileNumber?, header?, body?, buttons? }] }` → 200 `{ campaignId, queued, failed, results: [{ ref, phone, id, error }] }`: a bulk send that shows in Bulk send; each row is answered on its own (a bad row doesn't stop the rest), `ref` is echoed back for the caller's own record id
 - `GET /api/v1/messages/{id}`: status (each key sees only its own messages)
 - `GET /api/v1/templates`: approved templates and their variables
 
