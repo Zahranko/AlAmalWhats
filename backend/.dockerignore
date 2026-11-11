@@ -1,0 +1,12 @@
+# Keep the build context small and free of secrets/local junk.
+**/bin/
+**/obj/
+publish/
+*.log
+**/appsettings.Development.json
+**/appsettings.Local.json
+**/web.config
+**/*.user
+**/.env
+Dockerfile
+.dockerignore

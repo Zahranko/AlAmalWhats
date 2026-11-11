@@ -11,13 +11,14 @@ namespace WaPlatform.Api.Services;
 /// Sends queued messages at WhatsApp:MessagesPerSecond. Each message is claimed with an atomic
 /// queued→sending update, so even two app instances (IIS overlapped recycle) never send twice.
 /// </summary>
-public class SendWorker(IServiceScopeFactory scopes, IOptionsMonitor<WhatsAppOptions> options, SendWakeup wakeup, ILogger<SendWorker> log)
+public class SendWorker(WorkerStartDelay startDelay, IServiceScopeFactory scopes, IOptionsMonitor<WhatsAppOptions> options, SendWakeup wakeup, ILogger<SendWorker> log)
     : BackgroundService
 {
     private static readonly TimeSpan[] Backoff = [TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(15), TimeSpan.FromHours(1)];
 
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
+        await startDelay.WaitAsync(nameof(SendWorker), ct);
         await RecoverInterruptedAsync(ct);
         while (!ct.IsCancellationRequested)
         {

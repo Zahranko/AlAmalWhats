@@ -10,7 +10,7 @@ namespace WaPlatform.Api.Services;
 /// opt-out keywords) and template status changes. Each step is idempotent, because Meta can
 /// deliver the same event more than once.
 /// </summary>
-public class WebhookProcessor(IServiceScopeFactory scopes, WebhookWakeup wakeup, ChangeFeed feed, ILogger<WebhookProcessor> log) : BackgroundService
+public class WebhookProcessor(WorkerStartDelay startDelay, IServiceScopeFactory scopes, WebhookWakeup wakeup, ChangeFeed feed, ILogger<WebhookProcessor> log) : BackgroundService
 {
     private static readonly HashSet<string> StopWords = new(StringComparer.OrdinalIgnoreCase)
         { "stop", "unsubscribe", "إيقاف", "ايقاف", "توقف", "الغاء", "إلغاء", "الغاء الاشتراك", "إلغاء الاشتراك" };
@@ -27,6 +27,7 @@ public class WebhookProcessor(IServiceScopeFactory scopes, WebhookWakeup wakeup,
 
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
+        await startDelay.WaitAsync(nameof(WebhookProcessor), ct);
         while (!ct.IsCancellationRequested)
         {
             var processed = 0;

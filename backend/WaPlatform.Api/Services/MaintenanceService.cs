@@ -11,11 +11,12 @@ namespace WaPlatform.Api.Services;
 /// - syncs templates from Meta, so new and changed templates appear without a manual sync;
 /// - deletes message data older than WhatsApp:RetentionMonths, the period promised in /privacy, and expired sign-ins.
 /// </summary>
-public class MaintenanceService(IServiceScopeFactory scopes, IOptionsMonitor<WhatsAppOptions> options, ILogger<MaintenanceService> log)
+public class MaintenanceService(WorkerStartDelay startDelay, IServiceScopeFactory scopes, IOptionsMonitor<WhatsAppOptions> options, ILogger<MaintenanceService> log)
     : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
+        await startDelay.WaitAsync(nameof(MaintenanceService), ct);
         using var timer = new PeriodicTimer(TimeSpan.FromHours(1));
         do
         {

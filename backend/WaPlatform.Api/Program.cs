@@ -15,6 +15,7 @@ builder.Configuration
     .AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true)
     .AddEnvironmentVariables();
 
+builder.Services.AddSingleton<WorkerStartDelay>();
 builder.Services.AddSingleton<WebhookWakeup>();
 builder.Services.AddSingleton<SendWakeup>();
 builder.Services.AddSingleton<ChangeFeed>();
@@ -57,6 +58,21 @@ var app = builder.Build();
 if (isCli)
     return await Cli.RunAsync(app.Services, args);
 
+// On the VPS the database is only reachable from inside the server, so the pipeline can't run
+// "migrate" itself: the new container applies pending migrations before it reports ready, and
+// the blue/green switch only happens once it has. Off unless Database:MigrateOnStartup is true.
+if (app.Configuration.GetValue("Database:MigrateOnStartup", false))
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var pending = (await db.Database.GetPendingMigrationsAsync()).ToList();
+    if (pending.Count > 0)
+    {
+        app.Logger.LogInformation("Applying migrations: {Migrations}", string.Join(", ", pending));
+        await db.Database.MigrateAsync();
+    }
+}
+
 // The app runs behind the Next.js server / a reverse proxy; trust its X-Forwarded-* headers
 // (loopback proxies only, by default) so audit logs record the real client IP.
 app.UseForwardedHeaders(new ForwardedHeadersOptions
@@ -85,6 +101,21 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapGet("/api/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
+// Ready = the process is up and the database answers. The VPS deploy waits for this before it
+// sends the new version any traffic.
+app.MapGet("/api/health/ready", async (AppDbContext db, CancellationToken ct) =>
+{
+    try
+    {
+        return await db.Database.CanConnectAsync(ct)
+            ? Results.Ok(new { status = "ready" })
+            : Results.Json(new { status = "database unavailable" }, statusCode: 503);
+    }
+    catch (Exception) when (!ct.IsCancellationRequested)
+    {
+        return Results.Json(new { status = "database unavailable" }, statusCode: 503);
+    }
+}).AllowAnonymous();
 
 // Template button target: https://<api>/chat (default number) or /chat/{number}, optional ?text=.
 // Forwards to a WhatsApp chat; only ever to wa.me, so it can't be used as an open redirect.
