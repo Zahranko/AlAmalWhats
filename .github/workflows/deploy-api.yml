@@ -9,10 +9,8 @@ name: Deploy API
 #   FTP_USER           hosting account user
 #   FTP_PASSWORD       hosting account password
 #   FTP_DIR            site folder on the FTP server, e.g. whatsapp
+# Retired 2026-11-12: the API runs on the VPS (deploy-vps.yml). Manual only, kept until site4now is closed.
 on:
-  push:
-    branches: [main]
-    paths: ["backend/**", ".github/workflows/deploy-api.yml"]
   workflow_dispatch:
 
 concurrency: deploy-api

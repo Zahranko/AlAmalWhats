@@ -3,9 +3,8 @@ name: Keep API awake
 # The shared IIS host stops the app after ~20 idle minutes, which also stops the send queue and
 # scheduled campaigns. A request every 10 minutes keeps it running (and starts it again if it
 # stopped). GitHub pauses scheduled workflows after 60 days without repository activity.
+# Retired 2026-11-12: the VPS doesn't idle the API out. Manual only.
 on:
-  schedule:
-    - cron: "*/10 * * * *"
   workflow_dispatch:
 
 jobs:
