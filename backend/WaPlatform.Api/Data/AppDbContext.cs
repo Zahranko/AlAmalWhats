@@ -19,7 +19,7 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options) : DbCo
     public DbSet<AppSetting> Settings => Set<AppSetting>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
-    // Cookie-signing keys, shared across app restarts and recycles (in-memory keys would log everyone out).
+    // Cookie-signing keys, shared across restarts and deploys (in-memory keys would log everyone out).
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
     protected override void OnModelCreating(ModelBuilder b)

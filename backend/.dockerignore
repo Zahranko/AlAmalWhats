@@ -5,7 +5,6 @@ publish/
 *.log
 **/appsettings.Development.json
 **/appsettings.Local.json
-**/web.config
 **/*.user
 **/.env
 Dockerfile

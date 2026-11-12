@@ -23,7 +23,7 @@ RUN dotnet publish WaPlatform.Api/WaPlatform.Api.csproj \
         -p:UseAppHost=false \
         -p:DebugType=none \
         -o /app \
- && rm -f /app/appsettings.Development.json /app/appsettings.Local.json /app/web.config \
+ && rm -f /app/appsettings.Development.json /app/appsettings.Local.json \
  && mkdir -p /dpkeys
 
 FROM mcr.microsoft.com/dotnet/aspnet:${DOTNET_VERSION}-noble-chiseled-extra AS final

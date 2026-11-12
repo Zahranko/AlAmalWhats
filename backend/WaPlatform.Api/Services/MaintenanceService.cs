@@ -7,7 +7,7 @@ using WaPlatform.Api.WhatsApp;
 namespace WaPlatform.Api.Services;
 
 /// <summary>
-/// Hourly housekeeping, also run at startup (on IIS the app may have been idle):
+/// Hourly housekeeping, also run at startup:
 /// - syncs templates from Meta, so new and changed templates appear without a manual sync;
 /// - deletes message data older than WhatsApp:RetentionMonths, the period promised in /privacy, and expired sign-ins.
 /// </summary>

@@ -9,7 +9,7 @@ namespace WaPlatform.Api.Services;
 
 /// <summary>
 /// Sends queued messages at WhatsApp:MessagesPerSecond. Each message is claimed with an atomic
-/// queued→sending update, so even two app instances (IIS overlapped recycle) never send twice.
+/// queued→sending update, so even two app instances (blue/green overlap during a deploy) never send twice.
 /// </summary>
 public class SendWorker(WorkerStartDelay startDelay, IServiceScopeFactory scopes, IOptionsMonitor<WhatsAppOptions> options, SendWakeup wakeup, ILogger<SendWorker> log)
     : BackgroundService

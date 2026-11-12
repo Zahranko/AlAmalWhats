@@ -24,7 +24,7 @@ public class SendWakeup : Wakeup;
 /// <summary>
 /// Version number that changes whenever messages or conversations change (incoming messages,
 /// statuses, sends). Browsers long-poll it through /api/inbox/changes so the inbox updates at once.
-/// In memory: the API runs as a single IIS process.
+/// In memory: one API container serves at a time (two only overlap for seconds during a deploy).
 /// </summary>
 public class ChangeFeed
 {

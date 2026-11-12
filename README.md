@@ -112,10 +112,9 @@ build `npm run build`, start `npm start`. Environment variables:
 
 ### API secrets
 
-GitHub repository secrets used by `Deploy API`: `API_DB_CONNECTION`, `FTP_HOST`, `FTP_USER`,
-`FTP_PASSWORD`, `FTP_DIR`. Runtime secrets live only in the server's `web.config` as environment
-variables (`ConnectionStrings__Default`, `WhatsApp__*`, `Proxy__Secret`); the workflow never
-uploads a `web.config`, so they are not overwritten. The repository is public: never commit secrets.
+Runtime secrets (`ConnectionStrings__Default`, `WhatsApp__*`, `Proxy__Secret`) live only on the VPS in
+`/opt/apps/whatsapp-api/app.env`; the deploy never sends or overwrites them. GitHub holds only
+`VPS_DEPLOY_KEY` (secret) and `VPS_DEPLOY` (variable). The repository is public: never commit secrets.
 
 CORS allows `https://whatsapp.alamalhospitaljo.com` (`Cors:AllowedOrigins`), though the browser
 normally reaches the API through the frontend's `/api` proxy.
@@ -132,8 +131,6 @@ normally reaches the API through the frontend's `/api` proxy.
 - Free-form replies are only possible within 24 hours of the customer's last message (Meta's rule);
   otherwise staff send an approved template.
 - `MaintenanceService` (hourly) syncs templates and deletes data older than the 6-month retention.
-- The `Keep API awake` workflow pings the API every 10 minutes so IIS doesn't idle it out
-  (which would pause the queue and scheduled campaigns).
 
 ### API for other systems
 

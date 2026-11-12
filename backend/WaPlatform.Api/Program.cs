@@ -81,11 +81,7 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
 });
 app.UseTrustedProxyClientIp(builder.Configuration["Proxy:Secret"]);
 
-if (!app.Environment.IsDevelopment())
-{
-    app.UseHsts();
-    app.UseHttpsRedirection();
-}
+// No HTTPS redirect or HSTS here: nginx on the VPS terminates TLS, redirects port 80 and sends HSTS.
 
 var missingWhatsApp = app.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<WhatsAppOptions>>().Value
     .MissingSettings().ToList();

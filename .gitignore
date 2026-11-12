@@ -9,5 +9,5 @@ appsettings.Local.json
 node_modules/
 *.log
 
-# Local publish output (its web.config holds production secrets)
+# Local publish output
 backend/publish/
