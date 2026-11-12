@@ -96,8 +96,7 @@ deletes webhook events older than `WhatsApp:RetentionMonths` (default 6) daily. 
 | Part | URL | Host | How it deploys |
 |---|---|---|---|
 | Frontend | https://whatsapp.alamalhospitaljo.com | Hostinger (Node.js app) | Push to `main` → `Deploy frontend` workflow lints/builds, then moves the `deploy/frontend` branch to that commit → Hostinger builds and runs it |
-| API | https://whatsappapi.alamalhospitaljo.com | site4now (IIS) | Push to `main` touching `backend/` → `Deploy API` workflow builds, migrates the DB, uploads over FTPS, health-checks |
-| API (moving) | same address | Hostinger VPS (Docker, blue/green) | Push to `main` touching `backend/` → `Deploy API to VPS` builds the image; deploys once the `VPS_DEPLOY` variable is `true`. Move steps: [deploy/vps/README.md](deploy/vps/README.md) |
+| API | https://whatsappapi.alamalhospitaljo.com | Hostinger VPS `187.126.1.126` (Docker, blue/green, since 2026-11-12) | Push to `main` touching `backend/` → `Deploy API to VPS` builds the image and deploys it (once the `VPS_DEPLOY` variable is `true`; otherwise run it by hand). The new container applies migrations before it takes traffic. Details: [deploy/vps/README.md](deploy/vps/README.md) |
 
 `CI` builds and lints both apps on every PR and push.
 
